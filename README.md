@@ -30,8 +30,8 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 
 ### Change log
 
-2023-27-12:
-	Improved client auth widget: Now asks the server address and sends messages if there is an error
+2023-27-12:\
+	Improved client auth widget: Now asks the server address and sends messages if there is an error\
 	Improved client alarms widget: Added a fields where you can introduce the date after which you can display the notifications
 
 ### Future features
