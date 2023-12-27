@@ -1,0 +1,52 @@
+QMainWindow {
+    background-color: #f0f0f0;
+}
+
+QToolBar {
+    background-color: #333;
+    color: white;
+    border: 1px solid #555;
+    spacing: 3px;
+}
+
+QToolBar QToolButton {
+    background-color: #555;
+    border: 1px solid #777;
+    color: white;
+    padding: 5px;
+}
+
+QToolBar QToolButton:hover {
+    background-color: #777;
+}
+
+/* Style for QMenu */
+QMenu {
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+
+QMenu::item {
+    padding: 5px 15px;
+}
+
+QMenu::item:selected {
+    background-color: #ddd;
+}
+
+
+QPushButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+}
+
+QPushButton:hover {
+    background-color: #45a049;
+}
+
+
+QLabel {
+    color: #333;
+}
