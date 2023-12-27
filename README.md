@@ -6,7 +6,7 @@ Project is in Spanish so you may not understand all the variable names. I usuall
 
 ## Purpose of the project
 
-The main goal is educational, I do not want to build the best possible application so others could use it.\
+The main goal is educational, I want to create a real application to retrieve data from an API, store it and analyse it with machine learning.\
 I want to experiment with different technologies and increase my coding experience. That said, If you see this and you want to help me, you are welcome!
 
 ## Requirements for the project
