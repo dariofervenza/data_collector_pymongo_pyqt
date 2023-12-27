@@ -6,7 +6,7 @@ Project is in Spanish so you may not understand all the variable names. I usuall
 
 ## Purpose of the project
 
-The main goal is educational, I want to create a real application to retrieve data from an API, store it and analyse it with machine learning.\
+The main goal is educational, I do not want to build the best possible application so others could use it.\
 I want to experiment with different technologies and increase my coding experience. That said, If you see this and you want to help me, you are welcome!
 
 ## Requirements for the project
@@ -27,6 +27,12 @@ The server uses pydantic to validate the data that is sent, dataclasses are stor
 The client is a GUI made with pyQt5. It starts with an auth window. The root user is "paco" and the password is the same. This user is created automatically. After loggin in, the server creates a jwt token that is send to the client. This token will be used later when an user creates an alarm, so the server can identify who created the alarm.
 
 The client has a tool bar to display the different widgets. For the moment, I created a mainwidget which is the default page (It does not have a concrete purpose, just presentation). I also created a graphs widget were the data is displayed using plotly and also there is a table so you can see the values. Another widget is the alarms one, where users can create or delete alarms. In that widget will appear The notifications that these alarms create. But its not implemented for the moment.
+
+### Change log
+
+2023-27-12:
+	Improved client auth widget: Now asks the server address and sends messages if there is an error
+	Improved client alarms widget: Added a fields where you can introduce the date after which you can display the notifications
 
 ### Future features
 

@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QSpinBox
 from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QDateEdit
 from PyQt5.QtWidgets import QTableWidget
 from PyQt5.QtWidgets import QTableWidgetItem
 from PyQt5.QtWidgets import QTreeWidget
@@ -26,6 +27,7 @@ from PyQt5.QtWidgets import QGridLayout
 from PyQt5.QtWidgets import QSizePolicy
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QDate
 from PyQt5.QtCore import pyqtSignal as Signal
 
 
@@ -33,7 +35,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -60,6 +62,8 @@ class AlarmasWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.token = None
+        self.server_ip = "localhost"
+
         self.my_alarms = None
         """ Crea una tab con dos valores
         uno para añadir/eliminar/ver a alarmas, cada uno un grupo
@@ -217,7 +221,8 @@ class AlarmasWidget(QWidget):
         self.boton_leer_avisos = QPushButton("Leer avisos")
         self.boton_leer_avisos.clicked.connect(self.return_avisos_for_my_user)
         self.avisos_tree = QTreeWidget()
-        self.avisos_tree.setColumnCount(5)
+        self.avisos_tree.setColumnCount(7)
+        self.avisos_tree.setColumnWidth(5, 150)
         headers = [
             "Ciudad", "Tipo alarma",
             "Dato afectado", "Valor alarma",
@@ -225,10 +230,21 @@ class AlarmasWidget(QWidget):
             "Fecha alarma" , "Fecha Dato"]
         self.avisos_tree.setHeaderLabels(headers)
         self.avisos_tree.setFixedHeight(650)
+        fecha_avisos_label = QLabel(
+            "Fecha mínima de los datos que han disparado la alarma:"
+            )
+        fecha_avisos_label.setContentsMargins(10, 15, 10, 10)
+        self.fecha_avisos_date_edit = QDateEdit()
+        #◙self.fecha_avisos_date_edit.setMinimumDate(QDate(1990, 1, 1))
+        self.fecha_avisos_date_edit.setDate(QDate(2023, 12, 10))
+        self.fecha_avisos_date_edit.setDisplayFormat("dd-MM-yyyy")
+        self.fecha_avisos_date_edit.setContentsMargins(10, 10, 10, 10)
 
         layout_tab_de_avisos = QGridLayout()
         layout_tab_de_avisos.addWidget(self.avisos_tree, 0, 0, Qt.AlignmentFlag.AlignTop)
-        layout_tab_de_avisos.addWidget(self.boton_leer_avisos, 1, 0, Qt.AlignmentFlag.AlignTop)
+        layout_tab_de_avisos.addWidget(fecha_avisos_label, 1, 0, Qt.AlignmentFlag.AlignTop)
+        layout_tab_de_avisos.addWidget(self.fecha_avisos_date_edit, 2, 0, Qt.AlignmentFlag.AlignTop)
+        layout_tab_de_avisos.addWidget(self.boton_leer_avisos, 3, 0, Qt.AlignmentFlag.AlignTop)
 
         layout_tab_de_avisos.setRowStretch(2, 1)
 
@@ -241,7 +257,7 @@ class AlarmasWidget(QWidget):
         main_layout.addWidget(self.tab_alarmas_avisos)
         self.setLayout(main_layout)
     async def intercambiar_info_con_server(self, request):
-        uri = "ws://localhost:8765"
+        uri = f"ws://{self.server_ip}:8765"
         async with websockets.connect(uri) as websocket:
             await websocket.send(request)
             response = await websocket.recv()
@@ -374,8 +390,9 @@ class AlarmasWidget(QWidget):
         lógica y los añade al QTree
         """
         self.boton_leer_avisos.setEnabled(False)
-        fecha = "2023-12-01 00:00"
-        fecha = datetime.strptime(fecha, "%Y-%m-%d %H:%M")
+        fecha = self.fecha_avisos_date_edit.date()
+        fecha = fecha.toString("yyyy-MM-dd")
+        fecha = datetime.strptime(fecha, "%Y-%m-%d")
         data = {"token" : self.token, "fecha_avisos": fecha}
         request = {
             "tipo_request" : "return_avisos",

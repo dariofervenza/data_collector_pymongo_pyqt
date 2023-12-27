@@ -30,7 +30,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -45,12 +45,17 @@ ALERTS = os.path.join(IMAGES_FOLDER, "alerts.png")
 ANALYTICS = os.path.join(IMAGES_FOLDER, "analytics.png")
 STYLE = Path("style/style.qss").read_text()
 
-
 class GraficosWidget(QWidget):
+    """ Crea el widget de graficos
+    En el se muestran los datos de la API usando
+    un chart de plotly y una Qtable
+    """
     def __init__(self):
         super().__init__()
         self.token = None
         self.db_data = None
+        self.server_ip = "localhost"
+
         self.df_actual = pd.DataFrame()
         self.fig = go.Figure()
 
@@ -146,9 +151,6 @@ class GraficosWidget(QWidget):
             )
         layout_tab_graficos.setContentsMargins(10, 30, 10, 10)
         layout_tab_graficos.setRowStretch(4, 1)
-
-
-
         self.tabla_datos = QTableWidget(0, 5)
         encabezado = ["Ciudad", "Fecha", "Temperatura", "Humedad", "Presión"]
         self.tabla_datos.setColumnWidth(1, 150)
@@ -220,7 +222,7 @@ class GraficosWidget(QWidget):
         """ Realiza la solicitud de datos al servidor
         utilizando websockets
         """
-        uri = "ws://localhost:8765"
+        uri = f"ws://{self.server_ip}:8765"
         query = {"location.name" : ciudad}
         token = {"token" : self.token, "query" : query}
         request = {"tipo_request" : "data_request", "value" : token}

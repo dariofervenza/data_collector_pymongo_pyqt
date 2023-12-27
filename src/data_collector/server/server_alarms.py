@@ -20,7 +20,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -156,7 +156,7 @@ async def return_avisos(avisos_collection, fecha_avisos,
                 aviso["fecha_alarma"] = alarma_obj["fecha_alarma"]
                 aviso["tipo_alarma"] = alarma_obj["tipo_alarma"]
                 aviso["dato_afectado"] = alarma_obj["dato_afectado"]
-                aviso["ciudad"] = alarma_obj["fecha_alarma"]
+                aviso["ciudad"] = alarma_obj["ciudad"]
                 query_dato = {"_id" : ObjectId(aviso["medida_id"])}
                 dato_obj = await data_collection.find_one(query_dato)
                 fecha_dato = dato_obj["location"]["localtime"]

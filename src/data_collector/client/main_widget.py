@@ -26,7 +26,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -55,6 +55,8 @@ class MainWidget(QWidget):
 
         self.token = None
         self.db_data = None
+        self.server_ip = "localhost"
+
 
         self.ciudad_combo_box = QComboBox(self)
         lists_ciudades = ["Vigo", "Lugo", "Madrid"]
@@ -107,7 +109,7 @@ class MainWidget(QWidget):
         Gestiona la conexion asincrona con la
         db
         """
-        uri = "ws://localhost:8765"
+        uri = f"ws://{self.server_ip}:8765"
         query = {"location.name" : ciudad}
         token = {"token" : self.token, "query" : query}
         request = {"tipo_request" : "data_request", "value" : token}

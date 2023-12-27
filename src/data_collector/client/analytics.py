@@ -36,7 +36,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -55,6 +55,8 @@ class AnalyticsWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.token = None
+        self.server_ip = "localhost"
+
         self.lista_dfs_resampled = []
         self.train_list = []
         self.test_list = []
@@ -69,7 +71,7 @@ class AnalyticsWidget(QWidget):
         """ Lee los datos de la API que se encuentren
         almacenados en la db para una ciudad concreta
         """
-        uri = "ws://localhost:8765"
+        uri = f"ws://{self.server_ip}:8765"
         query = {"location.name" : ciudad}
         token = {"token" : self.token, "query" : query}
         request = {"tipo_request" : "data_request", "value" : token}
@@ -212,7 +214,7 @@ class AnalyticsWidget(QWidget):
         tab_maestra.addTab(tab_detalle_corr_scroll_area, "Correlaciones")
         layout_general_scroll_detalle_corr = QVBoxLayout()
         layout_general_scroll_detalle_corr.addWidget(tab_detalle_corr)
-        tab_detalle_corr_scroll_area.setLayout(layout_general_scroll_detalle_corr)        
+        tab_detalle_corr_scroll_area.setLayout(layout_general_scroll_detalle_corr)
 
 
         tab_districucion_datos = QWidget()
@@ -263,6 +265,3 @@ class AnalyticsWidget(QWidget):
         label_distribucion = QLabel("Proximamente")
         layout_distribucion_datos.addWidget(label_distribucion)
         tab_districucion_datos.setLayout(layout_distribucion_datos)
-
-
-

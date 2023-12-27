@@ -36,7 +36,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -61,6 +61,8 @@ class MainWindow(QMainWindow):
         #self.setGeometry(100, 100, 800, 800)
         self.setWindowIcon(QIcon(LOGO))
         self.token = None
+        self.server_ip = "localhost"
+
         menu_bar = self.menuBar()
         archivo_menu = menu_bar.addMenu("Archivo")
         ayuda_menu = menu_bar.addMenu("&Ayuda")

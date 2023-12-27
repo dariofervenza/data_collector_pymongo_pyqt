@@ -26,7 +26,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -54,7 +54,7 @@ async def insert_api_data_in_mongo(my_db, my_col, ciudad: str):
     """
     print(await my_db.list_collection_names())
     params = {
-        'access_key': 'aaaaaaaaaaa',
+        'access_key': 'aaaaaaaa',
         'query': ciudad
     }
     api_result = requests.get(
@@ -219,7 +219,7 @@ async def main(my_col, users_collection,
         )
     scheduler.start()
     print("AÑADIDOS SCHEDULERS")
-    async with websockets.serve(partial_handler, "localhost", 8765):
+    async with websockets.serve(partial_handler, "0.0.0.0", 8765):
         await asyncio.Future()
 
 if __name__ == "__main__":
