@@ -20,7 +20,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -85,9 +85,9 @@ async def create_avisos(alarms_collection, avisos_collection, data_collection):
     si ya existe una notificacion igual y la crea si es necesario
     """
     alarmas = alarms_collection.find()
-    alarmas = await alarmas.to_list(length=100)
+    alarmas = await alarmas.to_list(length=100000)
     datos = data_collection.find()
-    datos = await datos.to_list(length=100)
+    datos = await datos.to_list(length=100000)
     for alarm in alarmas:
         id_alarma = alarm["_id"]
         tipo_alarma = alarm["tipo_alarma"]

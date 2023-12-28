@@ -26,7 +26,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -54,7 +54,7 @@ async def insert_api_data_in_mongo(my_db, my_col, ciudad: str):
     """
     print(await my_db.list_collection_names())
     params = {
-        'access_key': 'aaaaaaaa',
+        'access_key': 'aaaaaaaaaaa',
         'query': ciudad
     }
     api_result = requests.get(

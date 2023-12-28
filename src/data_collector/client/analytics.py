@@ -9,9 +9,12 @@ import websockets
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QGridLayout
 from PyQt5.QtWidgets import QScrollArea
+
+from PyQt5.QtCore import Qt
 
 import plotly.graph_objs as go
 import pandas as pd
@@ -36,7 +39,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -168,12 +171,37 @@ class AnalyticsWidget(QWidget):
             fig.subplots_adjust(hspace=0.20)
             for index, columna in enumerate(self.lista_dfs_resampled[i].columns):
                 plot_acf(self.lista_dfs_resampled[i][columna], ax=ax[index], lags=7*5)
-                ax[index].set_title(f"{columna.capitalize()} en {ciudad}")
+                ax[index].set_title(f"Correlaciones {columna.capitalize()} en {ciudad}")
                 ax[index].set_xlabel("Lags")
-                ax[index].set_ylabel("Correlaciones")
+                ax[index].set_ylabel("Correlación")
             lista_fig_correlaciones.append(fig)
-
         return lista_fig_correlaciones
+
+    def forecasting_serie_unica(self, variable):
+        fig, ax = plt.subplots(figsize=(12, 5), nrows=len(self.ciudades), ncols=1)
+        fig.tight_layout()
+        fig.subplots_adjust(hspace=0.4)
+        for numero, ciudad in enumerate(self.ciudades):
+            forecaster = ForecasterAutoreg(
+                regressor=LGBMRegressor(
+                    random_state=15926, verbose=-1,
+                    n_estimators=1300, max_depth=8,
+                    learning_rate=0.027914, reg_alpha=0,
+                    reg_lambda=0
+                    ),
+                lags=30
+                )
+            forecaster.fit(y=self.train_list[numero][variable])
+            predictions = forecaster.predict(steps=len(self.test_list[numero]))
+            self.train_list[numero][variable].plot(ax=ax[numero], label=f"Train {variable} en {ciudad}")
+            self.test_list[numero][variable].plot(ax=ax[numero], label=f"Test {variable} en {ciudad}")
+            predictions.plot(ax=ax[numero], label=f"Predictions {variable} en {ciudad}")
+            ax[numero].legend()
+            ax[numero].set_title(f"Forecasting train-test de {variable} en {ciudad}")
+            ax[numero].set_ylabel(variable)
+            ax[numero].set_xlabel("fecha")
+        return fig
+
     def create_figure(self):
         """ Crea el layout de las tabs que
         contiene este widget.
@@ -196,7 +224,9 @@ class AnalyticsWidget(QWidget):
 
         """
         tab_maestra = QTabWidget()
+        tab_maestra.setFocusPolicy(Qt.StrongFocus)
         tab_datos_iniciales_scroll = QScrollArea()
+        tab_datos_iniciales_scroll.setFocusPolicy(Qt.StrongFocus)
         tab_datos_iniciales_scroll.setWidgetResizable(True)
         tab_datos_iniciales_scroll.setFixedHeight(800)
         tab_datos_iniciales = QWidget()
@@ -208,9 +238,11 @@ class AnalyticsWidget(QWidget):
 
         tab_detalle_corr_scroll_area = QScrollArea()
         tab_detalle_corr = QWidget()
+        tab_detalle_corr.setFocusPolicy(Qt.StrongFocus)
         tab_detalle_corr_scroll_area.setWidget(tab_detalle_corr)
         tab_detalle_corr_scroll_area.setWidgetResizable(True)
         tab_detalle_corr_scroll_area.setFixedHeight(800)
+        tab_detalle_corr_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         tab_maestra.addTab(tab_detalle_corr_scroll_area, "Correlaciones")
         layout_general_scroll_detalle_corr = QVBoxLayout()
         layout_general_scroll_detalle_corr.addWidget(tab_detalle_corr)
@@ -220,14 +252,9 @@ class AnalyticsWidget(QWidget):
         tab_districucion_datos = QWidget()
         tab_maestra.addTab(tab_districucion_datos, "Distribución de los datos")
 
-        tab_forecasting_serie_unica = QWidget()
-        tab_forecasting_serie_unica_scroll = QScrollArea()
-        tab_maestra.addTab(tab_forecasting_serie_unica_scroll, "Forecasting serie única")
-        layout_forecasting_serie_unica_scroll = QVBoxLayout()
-        layout_forecasting_serie_unica_scroll.addWidget(tab_forecasting_serie_unica)
-        tab_forecasting_serie_unica_scroll.setWidget(tab_forecasting_serie_unica)
-        tab_forecasting_serie_unica_scroll.setWidgetResizable(True)
-        tab_forecasting_serie_unica_scroll.setLayout(layout_forecasting_serie_unica_scroll)
+
+
+
 
 
 
@@ -247,21 +274,90 @@ class AnalyticsWidget(QWidget):
             ax.set_ylabel(item.capitalize())
             ax.legend()
             #fig.tight_layout()
+
             evolucion_temp_canvas = FigureCanvas(fig)
             evolucion_temp_canvas.setFixedHeight(500)
             evolucion_temp_canvas.setContentsMargins(10, 60, 10, 10)
-            layout_datos_iniciales.addWidget(evolucion_temp_canvas)
+            
+            grupo_item = QGroupBox(item.capitalize())
+            layout_grupo_item = QVBoxLayout()
+            layout_grupo_item.addWidget(evolucion_temp_canvas)
+            grupo_item.setLayout(layout_grupo_item)
+            layout_datos_iniciales.addWidget(grupo_item)
         tab_datos_iniciales.setLayout(layout_datos_iniciales)
 
         layout_detalle_corr = QVBoxLayout()
         lista_fig_correlaciones = self.create_correlaciones_fig()
-        for fig_corr in lista_fig_correlaciones:
+        for fig_corr, ciudad in zip(lista_fig_correlaciones, self.ciudades):
             corr_canvas = FigureCanvas(fig_corr)
             corr_canvas.setFixedHeight(1500)
-            layout_detalle_corr.addWidget(corr_canvas)
+            grupo_corr = QGroupBox(f"Correlaciones en {ciudad.capitalize()}")
+            layout_grupo_corr = QVBoxLayout()
+            layout_grupo_corr.addWidget(corr_canvas)
+            grupo_corr.setLayout(layout_grupo_corr)
+            layout_detalle_corr.addWidget(grupo_corr)
         tab_detalle_corr.setLayout(layout_detalle_corr)
 
         layout_distribucion_datos = QGridLayout()
         label_distribucion = QLabel("Proximamente")
         layout_distribucion_datos.addWidget(label_distribucion)
         tab_districucion_datos.setLayout(layout_distribucion_datos)
+
+
+
+        sub_tab_maestra_serie_unica = QTabWidget()
+        sub_tab_maestra_serie_unica.setContentsMargins(10, 50, 10, 10)
+        tab_maestra.addTab(sub_tab_maestra_serie_unica, "Forecasting serie única")
+
+
+
+        tab_forecasting_serie_unica = QWidget()
+        tab_forecasting_serie_unica_scroll = QScrollArea()       
+        layout_forecasting_serie_unica_scroll = QVBoxLayout()
+        layout_forecasting_serie_unica_scroll.addWidget(tab_forecasting_serie_unica)
+        tab_forecasting_serie_unica_scroll.setWidget(tab_forecasting_serie_unica)
+        tab_forecasting_serie_unica_scroll.setWidgetResizable(True)
+        tab_forecasting_serie_unica_scroll.setLayout(layout_forecasting_serie_unica_scroll)
+
+        sub_tab_maestra_serie_unica.addTab(tab_forecasting_serie_unica_scroll, "Forecasting")
+
+        msg = (
+            "¡ATENCIÓN!",
+            "Se ha utilizado el mismo modelo en todos los forecasters.",
+            "Es necesario un fine-tunning para cada serie (próximamente)"
+            )
+        layout_tab_forecasting_serie_unica = QVBoxLayout()
+        lista_avisos = []
+        for i, mensaje in enumerate(msg):
+            lista_avisos.append(QLabel(mensaje))
+        for i, aviso in enumerate(lista_avisos):        
+            aviso.setObjectName(f"aviso_forecast_unica_{i}")
+            layout_tab_forecasting_serie_unica.addWidget(aviso)
+            layout_tab_forecasting_serie_unica.setAlignment(
+                aviso,
+                Qt.AlignCenter
+                )
+        variables = ("temperatura", "humedad", "presion")
+        lista_figuras = []
+        
+        
+
+        for variable in variables:
+            lista_figuras.append(self.forecasting_serie_unica(variable))
+        for fig, variable in zip(lista_figuras, variables):
+            canvas_forecasting_serie_unica = FigureCanvas(fig)
+            canvas_forecasting_serie_unica.setFixedHeight(1150)
+            forecasting_serie_unica_group = QGroupBox(variable.capitalize())
+            layout_forecasting_serie_unica_group = QVBoxLayout()
+            layout_forecasting_serie_unica_group.addWidget(
+                canvas_forecasting_serie_unica
+                )
+            forecasting_serie_unica_group.setLayout(layout_forecasting_serie_unica_group)
+            layout_tab_forecasting_serie_unica.addWidget(
+                forecasting_serie_unica_group
+                )
+        tab_forecasting_serie_unica.setLayout(layout_tab_forecasting_serie_unica)
+        
+        
+        
+        sub_tab_maestra_serie_unica.addTab(QWidget(), "Backtesting")

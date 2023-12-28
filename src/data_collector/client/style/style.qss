@@ -50,3 +50,15 @@ QPushButton:hover {
 QLabel {
     color: #333;
 }
+
+QGroupBox::title {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#aviso_forecast_unica_0, #aviso_forecast_unica_1, #aviso_forecast_unica_2{
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+
+}

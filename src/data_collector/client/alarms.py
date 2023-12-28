@@ -35,7 +35,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -429,10 +429,79 @@ class AlarmasWidget(QWidget):
             "fecha_dato" : list_fecha_dato,
             }
         df = pd.DataFrame(data)
+        df["fecha_dato"] = pd.to_datetime(df["fecha_dato"])
         df = df.sort_values(
-            by=["ciudad", "valor_alarma", "tipo_alarma",  "dato_afectado", "fecha_dato"],
+            by=["ciudad", "tipo_alarma",  "dato_afectado", "fecha_dato"],
             ascending=True
             )
+        df.reset_index(drop=True, inplace=True)
+        print(df.head(40))
+        print(len(df))
+        # VAMOS A MOSTRAR SOLO LOS AVISOS QUE TENGAN COMO MINIMO 8 HORAS DE DIFERENCIA
+        list_tipo_alarma = []
+        list_dato_afectado = []
+        list_ciudad = []
+        list_valor_alarma = []
+        list_valor_dato = []
+        list_fecha_alarma = []
+        list_fecha_dato = []
+        tomar_siguiente_dato = True
+        for indice, fila in df.iterrows():
+            if indice == 0:
+                list_tipo_alarma.append(fila["tipo_alarma"])
+                list_dato_afectado.append(fila["dato_afectado"])
+                list_ciudad.append(fila["ciudad"])
+                list_valor_alarma.append(fila["valor_alarma"])
+                list_valor_dato.append(fila["valor_dato"])
+                list_fecha_alarma.append(fila["fecha_alarma"])
+                list_fecha_dato.append(fila["fecha_dato"])
+            else:
+                if tomar_siguiente_dato:
+                    minimum_date = fila["fecha_dato"]
+                    tomar_siguiente_dato = False
+                if df.iloc[indice - 1]["ciudad"] == fila["ciudad"]:
+                    if df.iloc[indice - 1]["tipo_alarma"] == fila["tipo_alarma"]:
+                        if df.iloc[indice - 1]["dato_afectado"] == fila["dato_afectado"]:
+                            if (fila["fecha_dato"] - minimum_date).total_seconds() / 3600 > 16:
+                                #print((fila["fecha_dato"] - minimum_date).total_seconds() / 3600)
+                                list_tipo_alarma.append(fila["tipo_alarma"])
+                                list_dato_afectado.append(fila["dato_afectado"])
+                                list_ciudad.append(fila["ciudad"])
+                                list_valor_alarma.append(fila["valor_alarma"])
+                                list_valor_dato.append(fila["valor_dato"])
+                                list_fecha_alarma.append(fila["fecha_alarma"])
+                                list_fecha_dato.append(fila["fecha_dato"])
+                                tomar_siguiente_dato = True
+                        else:
+                            tomar_siguiente_dato = True
+                    else:
+                        tomar_siguiente_dato = True                        
+                else:
+                    list_tipo_alarma.append(fila["tipo_alarma"])
+                    list_dato_afectado.append(fila["dato_afectado"])
+                    list_ciudad.append(fila["ciudad"])
+                    list_valor_alarma.append(fila["valor_alarma"])
+                    list_valor_dato.append(fila["valor_dato"])
+                    list_fecha_alarma.append(fila["fecha_alarma"])
+                    list_fecha_dato.append(fila["fecha_dato"])
+        data = {
+            "tipo_alarma" : list_tipo_alarma,
+            "dato_afectado" : list_dato_afectado,
+            "ciudad" : list_ciudad,
+            "valor_alarma" : list_valor_alarma,
+            "valor_dato" : list_valor_dato,
+            "fecha_alarma" : list_fecha_alarma,
+            "fecha_dato" : list_fecha_dato,
+            }
+        df = pd.DataFrame(data)
+        df["fecha_dato"] = pd.to_datetime(df["fecha_dato"])
+        df = df.sort_values(
+            by=["ciudad", "tipo_alarma",  "dato_afectado", "valor_alarma", "fecha_dato"],
+            ascending=True
+            )
+        df.reset_index(drop=True, inplace=True)
+        print(df.head(40))
+        print(len(df))
         ciudades = df["ciudad"].unique()
         self.avisos_tree.clear()
         for ciudad in ciudades:
