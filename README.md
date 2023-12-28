@@ -32,7 +32,7 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 
 2023-27-12:\
 	Improved client auth widget: Now it asks the server address and it sends messages if there is an error\
-	Improved client alarms widget: Added a field where you can introduce the date after which you can display the notifications
+	Improved client alarms widget: Added a field where you can introduce the date after which you can display the notifications\
 2023-28-12:\
 	Added forecasting single series widget (client)
 
