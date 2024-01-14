@@ -34,11 +34,23 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 	Improved client auth widget: Now it asks the server address and it sends messages if there is an error\
 	Improved client alarms widget: Added a field where you can introduce the date after which you can display the notifications\
 2023-28-12:\
-	Added forecasting single series widget (client)
+	Added forecasting single series widget (client)\
+2023-29-12:\
+	Added backtesting single series widget (client)
+2024-14-01:\
+	Changed design to fluent design (not finished yet though)
+	Redesigned Graphs widget - now you can add, remove and resize plots
+	Solved a bug where you couldn't move the vertical scroll bar
+
 
 ### Future features
 
-I want to experiment with machine learning forecasting so I will add a skforecast feature (I tried that library in the past so it will come soon). I would also like to implement an outliers detector system.
+Add a diagram to explain the app functionality in the github page\
+Add a new feature in the server that checks the expiration date of the token that is sent to the client\
+Change user feature + show user data\
+Add qthreads to prevent app from freezing when reloading data\
+Outliers detection system\
+New alarms based on the forecasting results and the outliers detector\
 Finally I want to try paho mqtt lib so I may create a new data source using that protocol
 
 ## Installation
