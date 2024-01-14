@@ -14,22 +14,33 @@ from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QCompleter
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QGridLayout
 from PyQt5.QtWidgets import QMessageBox
 
 from PyQt5.QtGui import QIcon
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QRunnable
 from PyQt5.QtCore import QThreadPool
 from PyQt5.QtCore import QObject
 from PyQt5.QtCore import pyqtSignal as Signal
 from PyQt5.QtCore import pyqtSlot as Slot
 
+from qfluentwidgets import PrimaryPushButton
+from qfluentwidgets import MessageBoxBase
+from qfluentwidgets import SubtitleLabel
+from qfluentwidgets import TitleLabel
+from qfluentwidgets import BodyLabel
+from qfluentwidgets import LineEdit
+from qfluentwidgets import SearchLineEdit
+from qfluentwidgets import FluentIcon as FIF
+
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -61,7 +72,8 @@ class AuthWindow(QWidget):
         self.worker = None
         self.mainwindow = mainwindow
         self.setWindowTitle("Inicio de sesion")
-        self.setGeometry(400, 400 , 350, 200)
+        self.setGeometry(400, 400 , 500, 220)
+        # self.resize(500, 500) #alternativa a setgeometry
         self.setWindowIcon(QIcon(LOGO))
 
         self.stacked = QStackedWidget()
@@ -73,53 +85,62 @@ class AuthWindow(QWidget):
         self.stacked.setCurrentIndex(0)
 
         main_layout = QVBoxLayout()
+
         main_layout.addWidget(self.stacked)
         self.setLayout(main_layout)
 
+        titulo_auth = TitleLabel("Inicio de sesión")
 
-        introduce_server_label = QLabel("Introduce la dirección del servidor:")
-        introduce_server_label.setContentsMargins(10, 15, 10, 10)
-        self.introduce_server_line_edit = QLineEdit(
-            placeholderText="localhost",
-            clearButtonEnabled=True
-            )
-        self.introduce_server_line_edit.setContentsMargins(10, 15, 10, 25)
+        introduce_server_label = BodyLabel("Introduce la dirección del servidor:")
+        #introduce_server_label.setContentsMargins(10, 15, 10, 25)
+        self.introduce_server_line_edit = LineEdit(self)
+        self.introduce_server_line_edit.setClearButtonEnabled(True)
+        self.introduce_server_line_edit.setPlaceholderText('localhost')
+        self.introduce_server_line_edit.setText('localhost')
+        #self.introduce_server_line_edit.setContentsMargins(10, 30, 10, 45)
         self.introduce_server_line_edit.returnPressed.connect(self.cambiar_a_user_page)
 
-        boton_aceptar_server = QPushButton("Aceptar")
-        boton_aceptar_server.setContentsMargins(10, 25, 10, 10)
+        boton_aceptar_server = PrimaryPushButton(FIF.UPDATE, "Aceptar", self)
+        #boton_aceptar_server.setContentsMargins(10, 30, 10, 10)
         boton_aceptar_server.clicked.connect(self.cambiar_a_user_page)
 
         layout_pagina_introduccion_server = QVBoxLayout()
+        layout_pagina_introduccion_server.addWidget(titulo_auth)
+        layout_pagina_introduccion_server.addSpacing(20) # AÑADIR ESPACIO VACIO, COMO UN WIDGET INVISIBLE
         layout_pagina_introduccion_server.addWidget(introduce_server_label)
+        layout_pagina_introduccion_server.addSpacing(10) # EXISTE SETSPACING
         layout_pagina_introduccion_server.addWidget(self.introduce_server_line_edit)
+        layout_pagina_introduccion_server.addSpacing(10)
         layout_pagina_introduccion_server.addWidget(boton_aceptar_server)
-        layout_pagina_introduccion_server.addStretch(1)
+        layout_pagina_introduccion_server.addStretch(1) # EXISTE SETSTRETCH
         self.pagina_introduccion_server.setLayout(layout_pagina_introduccion_server)
         usuarios_completer = QCompleter([
             "paco",
             "manolo",
             "user",
             ])
-        user_label = QLabel("Usuario")
-        self.user_line_edit = QLineEdit(
-            self,
-            placeholderText="Introduce usuario",
-            clearButtonEnabled=True
-            )
+        usuarios_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        usuarios_completer.setMaxVisibleItems(10)
+        user_label = BodyLabel("Usuario")
+        self.user_line_edit = SearchLineEdit(self)
+        self.user_line_edit.setClearButtonEnabled(True)
+        self.user_line_edit.setPlaceholderText('Introduce usuario')
+        self.user_line_edit.setText('paco')
+
         self.user_line_edit.setCompleter(usuarios_completer)
 
-        pass_label = QLabel("Contraseña")
-        self.pass_line_edit = QLineEdit(self,
-            placeholderText="Introduce contraseña",
-            clearButtonEnabled=True,
-            echoMode=QLineEdit.EchoMode.Password
-            )
-        self.boton_aceptar = QPushButton("Aceptar")
+        pass_label = BodyLabel("Contraseña")
+        self.pass_line_edit = LineEdit(self)
+        self.pass_line_edit.setPlaceholderText("Introduce contraseña")
+        self.pass_line_edit.setText("paco")
+        self.pass_line_edit.setClearButtonEnabled(True)
+        self.pass_line_edit.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.boton_aceptar = PrimaryPushButton(FIF.SEND, "Aceptar", self)
         self.boton_aceptar.clicked.connect(self.authenticate)
         self.pass_line_edit.returnPressed.connect(self.boton_aceptar.click)
 
-        self.boton_regresar = QPushButton("Regresar")
+        self.boton_regresar = PrimaryPushButton(FIF.CANCEL, "Regresar", self)
         self.boton_regresar.clicked.connect(self.cambiar_a_servidor_page)
 
         layout_pagina_usuario = QVBoxLayout()
@@ -188,23 +209,29 @@ class AuthWindow(QWidget):
         self.thread_response = thread_response
         self.token = self.worker.token
         if self.thread_response == "Dirección del servidor inválida":
-            QMessageBox.critical(
+            """QMessageBox.critical(
                 self,
                 "Error",
                 "Dirección del servidor inválida"
-                )
+                )"""
+            error = MensajeError("Dirección del servidor inválida", self)
+            error.exec()
         elif self.thread_response == "Comprueba usuario y contraseña":
-            QMessageBox.critical(
+            """QMessageBox.critical(
                 self,
                 "Error",
                 "Comprueba usuario y contraseña"
-                )
+                )"""
+            error2 = MensajeError("Comprueba usuario y contraseña", self)
+            error2.exec()
         elif self.thread_response == "No es posible realizar la conexión con el servidor":
-            QMessageBox.critical(
+            """QMessageBox.critical(
                 self,
                 "Error",
                 "No es posible realizar la conexión con el servidor"
-                )
+                )"""
+            error3 = MensajeError("No es posible realizar la conexión con el servidor", self)
+            error3.exec()
         elif self.token \
         and self.thread_response == "Autenticado":
             self.mainwindow.token = self.token
@@ -274,3 +301,24 @@ class AuthWorker(QRunnable):
         except socket.gaierror:
             response = "Dirección del servidor inválida"
         return response
+class MensajeError(MessageBoxBase):
+    def __init__(self, mensaje, parent):
+        super().__init__(parent)
+        self.titleLabel = SubtitleLabel('Error', self)
+
+        icono = BodyLabel()
+        icono_critical = QIcon.fromTheme('dialog-warning').pixmap(32, 32)
+        icono.setPixmap(icono_critical)
+        mensaje = BodyLabel(mensaje)
+        self.viewLayout.addWidget(self.titleLabel)
+        self.viewLayout.addWidget(icono)
+        self.viewLayout.addWidget(mensaje)
+
+        self.yesButton.setText('Aceptar')
+        self.hideCancelButton()
+        #self.widget.setMinimumWidth(350)
+
+
+
+  
+

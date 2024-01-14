@@ -26,7 +26,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -54,7 +54,7 @@ async def insert_api_data_in_mongo(my_db, my_col, ciudad: str):
     """
     print(await my_db.list_collection_names())
     params = {
-        'access_key': 'aaaaaaaaaaa',
+        'access_key': 'aaaa',
         'query': ciudad
     }
     api_result = requests.get(
@@ -104,6 +104,7 @@ async def receive_client_query_and_send_db_result(my_col, users_collection,
             autenticado = await autenticar(user_dict, users_collection)
             if autenticado.pop("autenticado"):
                 token = jwt.encode(autenticado, secret_key, algorithm="HS256")
+                # VALORAR PONERLE CADUCIDAD
                 token = {"autenticado" : True, "token" : token}
                 token = json.dumps(token)
                 await websocket.send(token)
@@ -196,25 +197,25 @@ async def main(my_col, users_collection,
     scheduler.add_job(
         insert_api_data_in_mongo,
         "interval",
-        minutes=60,
+        minutes=207,
         args=[MY_DB, DATA_COLLECTION, "Vigo"]
         )
     scheduler.add_job(
         insert_api_data_in_mongo,
         "interval",
-        minutes=60,
+        minutes=207,
         args=[MY_DB, DATA_COLLECTION, "Madrid"]
         )
     scheduler.add_job(
         insert_api_data_in_mongo,
         "interval",
-        minutes=60,
+        minutes=207,
         args=[MY_DB, DATA_COLLECTION, "Lugo"]
         )
     scheduler.add_job(
         create_avisos,
         "interval",
-        seconds=10,
+        seconds=120,
         args=[alarms_collection, avisos_collection, DATA_COLLECTION]
         )
     scheduler.start()

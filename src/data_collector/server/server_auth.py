@@ -9,13 +9,15 @@ Funciones:
     - Autenticar (autenticar)
 """
 import bcrypt
+from datetime import datetime
+from datetime import timedelta
 from data_validation import Usuario
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -77,7 +79,14 @@ async def autenticar(user_dict, users_collection):
         hashed_password = user["contraseña"]
         crear_token = check_hashed_password(password, hashed_password)
         if crear_token:
-            result = {"autenticado" : True, "sub" : str(user["_id"]), "user" : user["usuario"]}
+            fecha_caducidad_token = datetime.now() + timedelta(days=1)
+            fecha_caducidad_token = fecha_caducidad_token.strftime("%Y-%m-%d %H:%M:%S")
+            result = {
+                "autenticado" : True,
+                "sub" : str(user["_id"]),
+                "user" : user["usuario"],
+                "fecha_caducidad" : fecha_caducidad_token
+                }
         else:
             result = {"autenticado" : False}
     else:
