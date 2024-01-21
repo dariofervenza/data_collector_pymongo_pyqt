@@ -45,10 +45,15 @@ from qfluentwidgets import ToolTipFilter
 from qfluentwidgets import ToolTipPosition
 from qfluentwidgets import InfoBar
 from qfluentwidgets import InfoBarPosition
+from qfluentwidgets import SpinBox
 from qfluentwidgets import FlowLayout
 from qfluentwidgets import SmoothScrollArea
 from qfluentwidgets import TableWidget
 from qfluentwidgets import Slider
+from qfluentwidgets import Action
+from qfluentwidgets import RoundMenu
+from qfluentwidgets import MenuAnimationType
+
 
 #from qframelesswindow.webengine import FramelessWebEngineView
 
@@ -56,7 +61,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -110,7 +115,7 @@ class GraficosWidget(QFrame):
         grupo_anadir_eliminar_graficos = QGroupBox("Modificar datos mostrados")
         layout_grupo_anadir_graf = QGridLayout()
         grupo_anadir_eliminar_graficos.setLayout(layout_grupo_anadir_graf)
-        label_anadir_grafico = BodyLabel("Añadir gráfico")
+        label_anadir_grafico = SubtitleLabel("Añadir gráfico")
         self.ciudad_anadir_grafico = ComboBox()
         for ciudad in self.lista_ciudades:
             self.ciudad_anadir_grafico.addItem(ciudad)
@@ -118,6 +123,11 @@ class GraficosWidget(QFrame):
         for variable in self.lista_variables:
             self.variable_anadir_grafico.addItem(variable)
         boton_anadir_grafico = PushButton(FIF.ADD, "Añadir gráfico", self)
+        boton_anadir_grafico.setToolTip("Añade un nuevo grafico en la zona inferior")
+        boton_anadir_grafico.installEventFilter(
+            ToolTipFilter(boton_anadir_grafico, 0, ToolTipPosition.BOTTOM_RIGHT)
+            )
+
         boton_anadir_grafico.clicked.connect(self.anadir_grafico_func)
         layout_grupo_anadir_graf.addWidget(label_anadir_grafico, 0, 0)   
         layout_grupo_anadir_graf.addWidget(self.ciudad_anadir_grafico, 1, 0)   
@@ -131,11 +141,6 @@ class GraficosWidget(QFrame):
         boton_recargar_datos_de_la_db.installEventFilter(ToolTipFilter(boton_recargar_datos_de_la_db, 300, ToolTipPosition.BOTTOM))
         layout_grupo_anadir_graf.addWidget(boton_recargar_datos_de_la_db, 1, 1, 2, 1)
 
-        label_eliminar_grafico = BodyLabel("Eliminar grupo")
-        combobox_grupos_a_eliminar = ComboBox()
-
-
-
 
         graficos_widget_container = QWidget()
         self.flow_layout_graficos_widget = FlowLayout()
@@ -145,6 +150,7 @@ class GraficosWidget(QFrame):
 
         grupo_1 = QGroupBox("Grafico 1: Temperaturas en Vigo")
         canvas_fig_1 = FigureCanvas()
+        canvas_fig_1.mpl_connect('button_press_event', self.on_canvas_click)
         layout = QVBoxLayout()
         layout.addWidget(canvas_fig_1)
         grupo_1.setLayout(layout)
@@ -152,6 +158,8 @@ class GraficosWidget(QFrame):
 
         grupo_2 = QGroupBox("Gráfico 2: Humedad en Vigo")
         canvas_fig_humedad = FigureCanvas()
+        canvas_fig_humedad.mpl_connect('button_press_event', self.on_canvas_click)
+
         layout_humedad = QVBoxLayout()
         layout_humedad.addWidget(canvas_fig_humedad)
         grupo_2.setLayout(layout_humedad)
@@ -159,6 +167,7 @@ class GraficosWidget(QFrame):
 
         grupo_3 = QGroupBox("Gráfico 3: Presion en Vigo")
         canvas_fig_3 = FigureCanvas()
+        canvas_fig_3.mpl_connect('button_press_event', self.on_canvas_click)
         layout_presion = QVBoxLayout()
         layout_presion.addWidget(canvas_fig_3)
         grupo_3.setLayout(layout_presion)
@@ -167,20 +176,26 @@ class GraficosWidget(QFrame):
         for grupo in self.lista_grupos_graficos:
             self.flow_layout_graficos_widget.addWidget(grupo)
 
-        
 
-        label_eliminar_grafico = BodyLabel("Eliminar grupo")
         self.combobox_grupos_a_eliminar = ComboBox()
+        label_eliminar_grafico = SubtitleLabel("Eliminar grupo")
         for group in self.lista_grupos_graficos:
             self.combobox_grupos_a_eliminar.addItem(group.title())
         self.boton_eliminar_grafico = PushButton(FIF.DELETE, "Eliminar", self)
+        self.boton_eliminar_grafico.setToolTip("Elimina el gráfico seleccionado en el despegable superior")
+        self.boton_eliminar_grafico.installEventFilter(
+            ToolTipFilter(self.boton_eliminar_grafico, 0, ToolTipPosition.BOTTOM_RIGHT)
+            )
         self.boton_eliminar_grafico.clicked.connect(self.eliminar_grafico)
         layout_grupo_anadir_graf.addWidget(label_eliminar_grafico, 0, 2)
         layout_grupo_anadir_graf.addWidget(self.combobox_grupos_a_eliminar, 2, 2)
         layout_grupo_anadir_graf.addWidget(self.boton_eliminar_grafico, 3, 2)
 
         self.widget_inferior_graphs = QWidget()
+        grupo_widget_customizar_graph = QGroupBox("Modificar gráficos")
         layout_widget_inferior_graphs = QGridLayout()
+        layout_grupo_widget_customizar_graph= QVBoxLayout()
+        grupo_widget_customizar_graph.setLayout(layout_grupo_widget_customizar_graph)
         self.widget_inferior_graphs.setLayout(layout_widget_inferior_graphs)
 
         self.explicacion_boton = PushButton(FIF.EDUCATION, "Mostrar explicación", self)
@@ -206,7 +221,8 @@ class GraficosWidget(QFrame):
         layout_widget_inferior_graphs.addWidget(self.grafico_combobox, 2, 0, Qt.AlignmentFlag.AlignTop)
         layout_widget_inferior_graphs.addWidget(self.slider_width, 2, 1, Qt.AlignmentFlag.AlignTop)
         layout_widget_inferior_graphs.addWidget(self.slider_height, 2, 2, Qt.AlignmentFlag.AlignTop)
-        self.flow_layout_graficos_widget.addWidget(self.widget_inferior_graphs)
+        #self.flow_layout_graficos_widget.addWidget(self.widget_inferior_graphs)
+        layout_grupo_widget_customizar_graph.addWidget(self.widget_inferior_graphs)
 
 
         layout_tab_graficos = QGridLayout()
@@ -223,9 +239,17 @@ class GraficosWidget(QFrame):
             1,
             0,
             1,
-            3,
+            1,
             Qt.AlignmentFlag.AlignCenter
-            )        
+            )
+        layout_tab_graficos.addWidget(
+            grupo_widget_customizar_graph,
+            1,
+            2,
+            1,
+            1,
+            Qt.AlignmentFlag.AlignCenter
+            )       
         layout_tab_graficos.addWidget(
             graficos_widget_container,
             2,
@@ -240,13 +264,21 @@ class GraficosWidget(QFrame):
         layout_tab_graficos.setRowStretch(8, 1)
 
         titulo_datos = TitleLabel("Visualización de los datos")
+        label_seleccionar_horas_entre_datos = BodyLabel("Numero de horas entre datos")
+        self.spin_box_horas_entre_datos = SpinBox(tab_datos_container)
+        self.spin_box_horas_entre_datos.setValue(3)
+        self.spin_box_horas_entre_datos.setMaximum(5000)
         self.tabla_datos = TableWidget(self)
         self.tabla_datos.setBorderVisible(True)
         self.tabla_datos.setBorderRadius(8)
         self.tabla_datos.setWordWrap(False)
         self.tabla_datos.setRowCount(0)
         self.tabla_datos.setColumnCount(5) 
-        self.tabla_datos.verticalHeader().hide()   
+        self.tabla_datos.verticalHeader().hide() 
+        # NOTA: menu modificar datos --> continuar aqui, boton descargar?
+        # añade otros menus click derecho
+        self.tabla_datos.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabla_datos.customContextMenuRequested.connect(self.menu_modificar_datos)
         
   
         encabezado = ["Ciudad", "Fecha", "Temperatura", "Humedad", "Presión"]
@@ -259,11 +291,12 @@ class GraficosWidget(QFrame):
             ToolTipFilter(self.boton_actualizar_datos, 0, ToolTipPosition.TOP)
             )
 
-        layout_ver_datos = QVBoxLayout()
-        layout_ver_datos.addWidget(titulo_datos)
-        layout_ver_datos.addSpacing(15)
-        layout_ver_datos.addWidget(self.tabla_datos)
-        layout_ver_datos.addWidget(self.boton_actualizar_datos)
+        layout_ver_datos = QGridLayout()
+        layout_ver_datos.addWidget(titulo_datos, 0, 0)
+        layout_ver_datos.addWidget(label_seleccionar_horas_entre_datos, 0, 1)
+        layout_ver_datos.addWidget(self.spin_box_horas_entre_datos, 0, 2)
+        layout_ver_datos.addWidget(self.tabla_datos, 1, 0, 1, 3)
+        layout_ver_datos.addWidget(self.boton_actualizar_datos, 2, 0, 1, 3)
         tab_datos_container.setLayout(layout_ver_datos)
 
         tab_graficos_container.setLayout(layout_tab_graficos)
@@ -272,6 +305,45 @@ class GraficosWidget(QFrame):
         self.read_data_from_db()
         self.create_initial_figures()
         self.add_lines_to_data_table()
+    def menu_modificar_datos(self, event):
+        menu = RoundMenu(parent=self)
+        menu.addAction(Action(FIF.COPY, 'Copy'))
+        menu.addAction(Action(FIF.CUT, 'Cut'))
+        menu.actions()[0].setCheckable(True)
+        menu.actions()[0].setChecked(True)
+
+        # add sub menu
+        submenu = RoundMenu("Add to", self)
+        submenu.setIcon(FIF.ADD)
+        submenu.addActions([
+            Action(FIF.VIDEO, 'Video'),
+            Action(FIF.MUSIC, 'Music'),
+        ])
+        menu.addMenu(submenu)
+
+        # add actions
+        menu.addActions([
+            Action(FIF.PASTE, 'Paste'),
+            Action(FIF.CANCEL, 'Undo')
+        ])
+
+        # add separator
+        menu.addSeparator()
+        menu.addAction(Action(f'Select all', shortcut='Ctrl+A'))
+
+        # insert actions
+        menu.insertAction(
+            menu.actions()[-1], Action(FIF.SETTING, 'Settings', shortcut='Ctrl+S'))
+        menu.insertActions(
+            menu.actions()[-1],
+            [Action(FIF.HELP, 'Help', shortcut='Ctrl+H'),
+             Action(FIF.FEEDBACK, 'Feedback', shortcut='Ctrl+F')]
+        )
+        menu.actions()[-2].setCheckable(True)
+        menu.actions()[-2].setChecked(True)
+
+        # show menu
+        menu.exec(self.mapToGlobal(event), aniType=MenuAnimationType.DROP_DOWN)
     def on_whell_event(self, event, scroll_area):
         delta = event.angleDelta().y()
         delta = int(scroll_area.verticalScrollBar().value() - delta / 3)
@@ -300,6 +372,8 @@ class GraficosWidget(QFrame):
         df = self.df_actual
         df_maestro = pd.concat([df_maestro, df])
         df_maestro = df_maestro.sort_values(by=["ciudad", "fecha"], ascending=False)
+        numero_horas_entre_datos = self.spin_box_horas_entre_datos.value()
+        df_maestro = self.filtrar_df_datos(df_maestro, numero_horas_entre_datos)
         for _, row in df_maestro.iterrows():
             lineas_actuales = self.tabla_datos.rowCount()
             self.tabla_datos.setRowCount(lineas_actuales + 1)
@@ -316,6 +390,61 @@ class GraficosWidget(QFrame):
         self.tabla_datos.resizeColumnsToContents()
         self.add_lines_to_data_table_success()
         self.boton_actualizar_datos.setEnabled(True)
+    def filtrar_df_datos(self, df, numero_horas_entre_datos):
+        print("df original graphs datos")
+        print(len(df))
+        lista_fechas = []
+        lista_temperaturas = []
+        lista_humedades = []
+        lista_presiones = []
+        lista_ciudades = []
+        tomar_siguiente_dato = True
+        df = df.sort_values(by=["ciudad", "fecha"], ascending=True)
+        df.reset_index(drop=True, inplace=True)
+        for indice, fila in df.iterrows():
+            if indice == 0:
+                lista_fechas.append(fila["fecha"])
+                lista_temperaturas.append(fila["temperatura"])
+                lista_humedades.append(fila["humedad"])
+                lista_presiones.append(fila["presion"])
+                lista_ciudades.append(fila["ciudad"])
+            else:
+                if tomar_siguiente_dato:
+                    minimum_date = fila["fecha"]
+                    tomar_siguiente_dato = False
+                if df.iloc[indice - 1]["ciudad"] == fila["ciudad"]:
+                    if ((fila["fecha"] - minimum_date).total_seconds() / 3600) >= numero_horas_entre_datos:
+                        lista_fechas.append(fila["fecha"])
+                        lista_temperaturas.append(fila["temperatura"])
+                        lista_humedades.append(fila["humedad"])
+                        lista_presiones.append(fila["presion"])
+                        lista_ciudades.append(fila["ciudad"])
+                        tomar_siguiente_dato = True
+                    else:
+                        pass
+                else:
+                    lista_fechas.append(fila["fecha"])
+                    lista_temperaturas.append(fila["temperatura"])
+                    lista_humedades.append(fila["humedad"])
+                    lista_presiones.append(fila["presion"])
+                    lista_ciudades.append(fila["ciudad"])
+                    tomar_siguiente_dato = True
+        data = {
+            "fecha" : lista_fechas,
+            "temperatura" : lista_temperaturas,
+            "humedad" : lista_humedades,
+            "presion" : lista_presiones,
+            "ciudad" : lista_ciudades,
+            }
+        df = pd.DataFrame(data)
+        df["fecha"] = pd.to_datetime(df["fecha"])
+        df = df.sort_values(
+            by=["ciudad", "fecha"],
+            ascending=False
+            )
+        df.reset_index(drop=True, inplace=True)   
+        print(len(df))     
+        return df
     def modify_graph_target_to_resize(self):
         grupo_objetivo = self.grafico_combobox.currentText()
         for group in self.lista_grupos_graficos:
@@ -350,6 +479,7 @@ class GraficosWidget(QFrame):
         grupo = QGroupBox(f"Gráfico {ultima_figura_index}: {variable} en {ciudad}")
         layout_grupo = QVBoxLayout()
         canvas = FigureCanvas(fig)
+        canvas.mpl_connect('button_press_event', self.on_canvas_click)
         canvas.setFixedHeight(height)
         grupo.setFixedHeight(height)
         canvas.setFixedWidth(width)
@@ -370,7 +500,6 @@ class GraficosWidget(QFrame):
         self.flow_layout_graficos_widget.removeAllWidgets()
         for group in self.lista_grupos_graficos:
             self.flow_layout_graficos_widget.addWidget(group)
-        self.flow_layout_graficos_widget.addWidget(self.widget_inferior_graphs)
 
     def eliminar_grafico(self):
         width = int((100 - self.slider_width.value())*1000 / 100 + 250)
@@ -460,7 +589,8 @@ class GraficosWidget(QFrame):
         token = {"token" : self.token, "query" : query}
         request = {"tipo_request" : "data_request", "value" : token}
         request = json.dumps(request)
-        async with websockets.connect(uri) as websocket:
+        custom_message_size = 1024*1024*5
+        async with websockets.connect(uri, max_size=custom_message_size) as websocket:
             await websocket.send(request)
             response = await websocket.recv()
             self.db_data = response
@@ -479,18 +609,26 @@ class GraficosWidget(QFrame):
         datos = json.loads(self.db_data)
         for element in datos:
             try:
-                fecha = element["location"]["localtime"]
-                temperatura = element["current"]["temperature"]
-                humedad = element["current"]["humidity"]
-                presion = element["current"]["pressure"]
-                ciudad = element["location"]["name"]
+                if "temperature" in element["current"].keys():
+                    fecha = element["location"]["localtime"]
+                    temperatura = element["current"]["temperature"]
+                    humedad = element["current"]["humidity"]
+                    presion = element["current"]["pressure"]
+                    ciudad = element["location"]["name"]
+                else:
+                    fecha = element["location"]["localtime"]
+                    temperatura = element["current"]["temp_c"]
+                    humedad = element["current"]["humidity"]
+                    presion = element["current"]["pressure_mb"]
+                    ciudad = element["location"]["name"]
                 lista_fechas.append(fecha)
                 lista_temperaturas.append(temperatura)
                 lista_humedades.append(humedad)
                 lista_presiones.append(presion)
                 lista_ciudades.append(ciudad)
             except KeyError:
-                pass
+                print("error")
+                print(element)
         dict_data = {
             "fecha" : lista_fechas,
             "temperatura" : lista_temperaturas,
@@ -510,18 +648,18 @@ class GraficosWidget(QFrame):
             valor2 = "humedad"
         elif valor == "Presion":
             valor2 = "presion"
-        fig, ax = plt.subplots(figsize=(5, 6))
+        fig, ax = plt.subplots(figsize=(5, 4))
         datos = datos[["fecha", valor2]]
         datos = datos.set_index("fecha")
         datos.plot(ax=ax, label=f"{valor} en {ciudad}")
         ax.set_title(f"Evolución {valor2}", fontsize=15)
         ax.set_xlabel("Fecha", fontsize=15)
         ax.set_ylabel(f"{valor}", fontsize=15)
-        locator = mdates.WeekdayLocator(interval=2) # Set to every 2 weeks (15 days)
+        locator = mdates.DayLocator(interval=10) # Set to every 2 weeks (15 days)
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
         fig.tight_layout()
-        plt.xticks(rotation=5)
+        plt.xticks(rotation=35)
         ax.tick_params(axis='both', which='both', labelsize=12)
         return fig
     """def create_plotly_fig(self, ciudad: str, valor: str, variable: FramelessWebEngineView):"""
@@ -570,3 +708,5 @@ class GraficosWidget(QFrame):
             duration=20000,
             parent=self
             )
+    def on_canvas_click(self, event):
+        print("clickc")

@@ -18,6 +18,15 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QEasingCurve
 
 from qfluentwidgets import SmoothScrollArea
+from qfluentwidgets import Flyout
+from qfluentwidgets import FlyoutAnimationType
+from qfluentwidgets import Action
+from qfluentwidgets import CommandBar
+from qfluentwidgets import TransparentDropDownPushButton
+from qfluentwidgets import RoundMenu
+from qfluentwidgets import CommandBarView
+from qfluentwidgets import FluentIcon as FIF
+from qfluentwidgets import setFont
 
 import plotly.graph_objs as go
 import pandas as pd
@@ -42,7 +51,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -84,7 +93,8 @@ class AnalyticsWidget(QWidget):
         request = {"tipo_request" : "data_request", "value" : token}
         request = json.dumps(request)
 
-        async with websockets.connect(uri) as websocket:
+        custom_message_size = 1024*1024*5
+        async with websockets.connect(uri, max_size=custom_message_size) as websocket:
             await websocket.send(request)
             response = await websocket.recv()
             db_data = response
@@ -100,10 +110,17 @@ class AnalyticsWidget(QWidget):
         lista_presiones = []
         datos = json.loads(db_data)
         for element in datos:
-            fecha = element["location"]["localtime"]
-            temperatura = element["current"]["temperature"]
-            humedad = element["current"]["humidity"]
-            presion = element["current"]["pressure"]
+            if "temperature" in element["current"].keys():
+                fecha = element["location"]["localtime"]
+                temperatura = element["current"]["temperature"]
+                humedad = element["current"]["humidity"]
+                presion = element["current"]["pressure"]
+            else:
+                fecha = element["location"]["localtime"]
+                temperatura = element["current"]["temp_c"]
+                humedad = element["current"]["humidity"]
+                presion = element["current"]["pressure_mb"]
+                ciudad = element["location"]["name"]
             lista_fechas.append(fecha)
             lista_temperaturas.append(temperatura)
             lista_humedades.append(humedad)
@@ -259,8 +276,22 @@ class AnalyticsWidget(QWidget):
             ax[numero].set_ylabel(variable)
             ax[numero].set_xlabel("Fecha")"""
         return fig
+    def on_graph_click(self, event):
+        if event.inaxes:
+            view = CommandBarView(self)
+        view.addAction(Action(FIF.SHARE, 'Share'))
+        view.addAction(Action(FIF.SAVE, 'Save', triggered=self.save_fig))
+        view.addAction(Action(FIF.DELETE, 'Delete'))
 
+        view.addHiddenAction(Action(FIF.APPLICATION, 'App', shortcut='Ctrl+A'))
+        view.addHiddenAction(Action(FIF.SETTING, 'Settings', shortcut='Ctrl+S'))
+        view.resizeToSuitableWidth()
 
+        Flyout.make(view, self.tab_datos_iniciales_scroll, self, FlyoutAnimationType.FADE_IN)            
+    def save_fig(self):
+        pass
+    def switch_to_datos_iniciales(self):
+        pass
     def create_figure(self):
         """ Crea el layout de las tabs que
         contiene este widget.
@@ -304,20 +335,45 @@ class AnalyticsWidget(QWidget):
                                 QFigureCanvas
             Tab 'Forecasting multiseries':
         """
+
+        # NOTA: sustituye la tab aqui por el command bar con qstackedwidget ¿+scroll?
+        # y ponle el wheel event para el scrol
+
+        self.command_bar = CommandBar(self)
+        datos_iniciales_action = Action(FIF.CALENDAR, "Datos iniciales", self)
+        datos_iniciales_action.triggered.connect(self.switch_to_datos_iniciales)
+        self.command_bar.addAction(datos_iniciales_action)
+        self.command_bar.addSeparator()
+        button = TransparentDropDownPushButton('Menu', self, FIF.MENU)
+        button.setFixedHeight(34)
+        setFont(button, 12)
+
+        menu = RoundMenu(parent=self)
+        menu.addActions([
+            Action(FIF.COPY, 'Copy'),
+            Action(FIF.CUT, 'Cut'),
+            Action(FIF.PASTE, 'Paste'),
+            Action(FIF.CANCEL, 'Cancel'),
+            Action('Select all'),
+        ])
+        button.setMenu(menu)
+        self.command_bar.addWidget(button)
+        self.command_bar.addHiddenAction(Action(FIF.SETTING, 'Settings', shortcut='Ctrl+S'))
+
+
+
+
         tab_maestra = QTabWidget()
-        tab_datos_iniciales_scroll = QScrollArea()
-        # tab_datos_iniciales_scroll.setScrollAnimation(Qt.Vertical, 400, QEasingCurve.OutQuint)
-        # tab_datos_iniciales_scroll.setScrollAnimation(Qt.Horizontal, 400, QEasingCurve.OutQuint)
-        tab_datos_iniciales_scroll.setWidgetResizable(True)
+        self.tab_datos_iniciales_scroll = QScrollArea()
+        self.tab_datos_iniciales_scroll.setWidgetResizable(True)
         tab_datos_iniciales_widget = QWidget()
-        tab_datos_iniciales_scroll.setWidget(tab_datos_iniciales_widget)
-        tab_maestra.addTab(tab_datos_iniciales_scroll, "Datos iniciales")
+        self.tab_datos_iniciales_scroll.setWidget(tab_datos_iniciales_widget)
+        tab_maestra.addTab(self.tab_datos_iniciales_scroll, "Datos iniciales")
         layout_datos_iniciales_scroll = QVBoxLayout()
         layout_datos_iniciales_scroll.addWidget(tab_datos_iniciales_widget)
-        tab_datos_iniciales_scroll.setLayout(layout_datos_iniciales_scroll)
+        self.tab_datos_iniciales_scroll.setLayout(layout_datos_iniciales_scroll)
 
-        tab_datos_iniciales_widget.setFocusPolicy(Qt.StrongFocus)
-        tab_datos_iniciales_scroll.installEventFilter(self)
+        self.tab_datos_iniciales_scroll.installEventFilter(self)
 
         tab_detalle_corr_scroll_area = SmoothScrollArea()
         tab_detalle_corr_widget = QWidget()
@@ -333,10 +389,9 @@ class AnalyticsWidget(QWidget):
         tab_districucion_datos = QWidget()
         tab_maestra.addTab(tab_districucion_datos, "Distribución de los datos")
 
-        tab_datos_iniciales_scroll.setFocusPolicy(Qt.StrongFocus)
-
 
         layout_maestro = QVBoxLayout()
+        layout_maestro.addWidget(self.command_bar)
         layout_maestro.addWidget(tab_maestra)
 
         self.setLayout(layout_maestro)
@@ -355,19 +410,19 @@ class AnalyticsWidget(QWidget):
             #fig.tight_layout()
 
             evolucion_temp_canvas = FigureCanvas(fig)
+            evolucion_temp_canvas.mpl_connect("button_press_event", self.on_graph_click)
             evolucion_temp_canvas.setFixedHeight(500)
             evolucion_temp_canvas.setContentsMargins(10, 60, 10, 10)
             evolucion_temp_canvas.setFocusPolicy(Qt.StrongFocus)
             evolucion_temp_canvas.wheelEvent = lambda event: self.on_whell_event(
-                event, tab_datos_iniciales_scroll
+                event, self.tab_datos_iniciales_scroll
                 )
             grupo_item = QGroupBox(item.capitalize())
-            grupo_item.setFocusPolicy(Qt.StrongFocus)
             layout_grupo_item = QVBoxLayout()
             layout_grupo_item.addWidget(evolucion_temp_canvas)
             grupo_item.setLayout(layout_grupo_item)
             grupo_item.wheelEvent = lambda event: self.on_whell_event(
-                event, tab_datos_iniciales_scroll
+                event, self.tab_datos_iniciales_scroll
                 )
             layout_datos_iniciales.addWidget(grupo_item)
         tab_datos_iniciales_widget.setLayout(layout_datos_iniciales)

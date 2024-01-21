@@ -34,7 +34,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -132,7 +132,10 @@ class MainWidget(QFrame):
         self.text_edit.clear()
         datos = self.db_data
         datos = json.loads(datos)
+        datos = datos[: 5] # añadir control para regular el numero de datos
         datos = json.dumps(datos, indent=4, sort_keys=True)
+
+
         self.text_edit.insertPlainText(datos)
     async def retrieve_data_from_db(self, ciudad: str):
         """ Funcion provisional, será deprecated.

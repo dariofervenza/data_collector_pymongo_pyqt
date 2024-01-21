@@ -20,7 +20,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -105,18 +105,21 @@ async def create_avisos(alarms_collection, avisos_collection, data_collection):
                     "id_alarma" : ObjectId(id_alarma),
                     "medida_id" : ObjectId(medida_id),
                     }
-                document = await avisos_collection.find_one(query)
-                if not document:
-                    valor_dato_afectado = dato["current"][dato_afectado]
-                    aviso_obj = Avisos(
-                        id_alarma=ObjectId(id_alarma),
-                        medida_id=ObjectId(medida_id),
-                        revisado=False
-                        )
-                    await add_aviso(
-                        avisos_collection, aviso_obj, tipo_alarma,
-                        valor_dato_afectado, valor_alarma
-                        )
+                try:
+                    document = await avisos_collection.find_one(query)
+                    if not document:
+                        valor_dato_afectado = dato["current"][dato_afectado]
+                        aviso_obj = Avisos(
+                            id_alarma=ObjectId(id_alarma),
+                            medida_id=ObjectId(medida_id),
+                            revisado=False
+                            )
+                        await add_aviso(
+                            avisos_collection, aviso_obj, tipo_alarma,
+                            valor_dato_afectado, valor_alarma
+                            )
+                except KeyError:
+                    pass
 async def add_aviso(avisos_collection, aviso_obj,
                     tipo_alarma, valor_dato_afectado,
                     valor_alarma):
@@ -140,13 +143,13 @@ async def return_avisos(avisos_collection, fecha_avisos,
     """
     query = {"location.localtime" : {"$gt" : fecha_avisos}}
     datos_afectados = data_collection.find(query)
-    datos_afectados = await datos_afectados.to_list(length=500)
+    datos_afectados = await datos_afectados.to_list(length=50000)
     lista_avisos = []
     for dato in datos_afectados:
         dato_id = dato["_id"]
         query = {"revisado" : False, "medida_id" : ObjectId(dato_id)}
         avisos = avisos_collection.find(query)
-        avisos = await avisos.to_list(length=500)
+        avisos = await avisos.to_list(length=5000)
         for aviso in avisos:
             query_alarma = {"_id" : ObjectId(aviso["id_alarma"])}
             alarma_obj = await alarms_collection.find_one(query_alarma)
@@ -157,11 +160,9 @@ async def return_avisos(avisos_collection, fecha_avisos,
                 aviso["tipo_alarma"] = alarma_obj["tipo_alarma"]
                 aviso["dato_afectado"] = alarma_obj["dato_afectado"]
                 aviso["ciudad"] = alarma_obj["ciudad"]
-                query_dato = {"_id" : ObjectId(aviso["medida_id"])}
-                dato_obj = await data_collection.find_one(query_dato)
-                fecha_dato = dato_obj["location"]["localtime"]
+                fecha_dato = dato["location"]["localtime"]
                 aviso["fecha_dato"] = fecha_dato
                 dato_afectado = aviso["dato_afectado"]
-                aviso["valor_aviso"] = dato_obj["current"][dato_afectado]
+                aviso["valor_aviso"] = dato["current"][dato_afectado]
                 lista_avisos.append(aviso)
     return lista_avisos

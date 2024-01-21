@@ -36,11 +36,16 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 2023-28-12:\
 	Added forecasting single series widget (client)\
 2023-29-12:\
-	Added backtesting single series widget (client)
+	Added backtesting single series widget (client)\
 2024-14-01:\
-	Changed design to fluent design (not finished yet though)
-	Redesigned Graphs widget - now you can add, remove and resize plots
-	Solved a bug where you couldn't move the vertical scroll bar
+	Changed design to fluent design (not finished yet though)\
+	Redesigned Graphs widget - now you can add, remove and resize plots\
+	Solved a bug where you couldn't move the vertical scroll bar\
+2024-21-01:\
+	Switched to weatherapi.com API
+        Continued implementing fluentDesign (not finished)
+        More UI changes
+	
 
 
 ### Future features

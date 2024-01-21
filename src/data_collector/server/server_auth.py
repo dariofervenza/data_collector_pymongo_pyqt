@@ -17,7 +17,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -35,7 +35,8 @@ def check_hashed_password(password: str, hashed_password: str) -> bool:
     el usuario en la GUI coincide con el hash almacenado
     en la db.
     """
-    return bcrypt.checkpw(password.encode("utf-8"), hashed_password)
+    password_encoded = password.encode("utf-8")
+    return bcrypt.checkpw(password_encoded, hashed_password)
 
 async def return_user(username: str, users_collection):
     """ Comprueba si existe en la db un usuario
@@ -46,7 +47,7 @@ async def return_user(username: str, users_collection):
     result = await users_collection.find_one(query)
     return result
 
-async def insert_user(username: str, password: str, users_collection):
+async def insert_user(username: str, password: str, users_collection, tipo_user: str):
     """ Añade un usuario nuevo, comprueba primero si ya existe uno
     con igual username.
     Genera el hash de la contraseña y lo guarda en la db
@@ -56,7 +57,7 @@ async def insert_user(username: str, password: str, users_collection):
         print("no añadido root user")
     else:
         hashed_password = generate_password_hash(password)
-        query = {"usuario" : username, "contraseña" : hashed_password}
+        query = {"usuario" : username, "contraseña" : hashed_password, "tipo_user" : tipo_user}
         usuario_obj = Usuario(**query)
         await users_collection.insert_one(usuario_obj.dict())
         print("añadido root user")
@@ -76,7 +77,7 @@ async def autenticar(user_dict, users_collection):
     password = user_dict.get("contraseña")
     user = await return_user(user, users_collection)
     if user:
-        hashed_password = user["contraseña"]
+        hashed_password = user["contraseña"].encode("utf-8")
         crear_token = check_hashed_password(password, hashed_password)
         if crear_token:
             fecha_caducidad_token = datetime.now() + timedelta(days=1)

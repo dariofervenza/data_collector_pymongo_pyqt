@@ -26,7 +26,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -53,7 +53,7 @@ async def insert_api_data_in_mongo(my_db, my_col, ciudad: str):
     datos en una colección de MongoDB
     """
     print(await my_db.list_collection_names())
-    params = {
+    """params = {
         'access_key': 'aaaa',
         'query': ciudad
     }
@@ -62,7 +62,13 @@ async def insert_api_data_in_mongo(my_db, my_col, ciudad: str):
         params,
         timeout=5
         )
-    print(api_result.status_code, type(api_result.status_code))
+    print(api_result.status_code, type(api_result.status_code))"""
+    base_url = "http://api.weatherapi.com/v1/current.json"
+    params = {
+        "key" : "aaaaaaaa",
+        "q" : ciudad
+        }
+    api_result = requests.get(base_url, params=params)
     if api_result.status_code == 200:
         api_response = api_result.json()
         data = ApiData(**api_response)
@@ -120,7 +126,7 @@ async def receive_client_query_and_send_db_result(my_col, users_collection,
                 # aqui se comprobaria que el token es correcto
                 # (¿que pasa si roban un token?)
                 result = my_col.find(query)
-                result = await result.to_list(length=1000)
+                result = await result.to_list(length=500000)
                 result = json.dumps(result, default=str)
                 await websocket.send(result)
         elif datos_user_request["tipo_request"] == "create_alarm":
@@ -182,7 +188,8 @@ async def main(my_col, users_collection,
     crearse cuando se añada un dato).
     Lanza el handler del server con webosckets.
     """
-    await insert_user(root_user, root_pasword, users_collection)
+    tipo_user = "admin"
+    await insert_user(root_user, root_pasword, users_collection, tipo_user)
     partial_handler = partial(
         receive_client_query_and_send_db_result,
         my_col,
@@ -197,25 +204,25 @@ async def main(my_col, users_collection,
     scheduler.add_job(
         insert_api_data_in_mongo,
         "interval",
-        minutes=207,
+        minutes=20,
         args=[MY_DB, DATA_COLLECTION, "Vigo"]
         )
     scheduler.add_job(
         insert_api_data_in_mongo,
         "interval",
-        minutes=207,
+        minutes=20,
         args=[MY_DB, DATA_COLLECTION, "Madrid"]
         )
     scheduler.add_job(
         insert_api_data_in_mongo,
         "interval",
-        minutes=207,
+        minutes=20,
         args=[MY_DB, DATA_COLLECTION, "Lugo"]
         )
     scheduler.add_job(
         create_avisos,
         "interval",
-        seconds=120,
+        minutes=1,
         args=[alarms_collection, avisos_collection, DATA_COLLECTION]
         )
     scheduler.start()

@@ -21,7 +21,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -39,14 +39,11 @@ class Usuario(BaseModel):
     """
     usuario: str
     contraseña: str
-class Request(BaseModel):
-    """ Comprueba que los tipos de datos de la clave
-    'request' de la respuesta de la API sean correctos
-    """
-    type: str
-    query: str
-    language: str
-    unit: str
+    tipo_user: str
+class Condition(BaseModel):
+    text: str
+    icon: str
+    code: int
 class Location(BaseModel):
     """ Comprueba que los tipos de datos de la clave
     'location' de la respuesta de la API sean correctos
@@ -54,32 +51,39 @@ class Location(BaseModel):
     name: str
     country: str
     region: str
-    lat: str
-    lon: str
-    timezone_id: str
+    lat: float
+    lon: float
+    tz_id : str
     localtime: str
     localtime_epoch: int
-    utc_offset: str
 class Current(BaseModel):
     """ Comprueba que los tipos de datos de la clave
     'current' de la respuesta de la API sean correctos
     """
-    observation_time: str
-    temperature: int
-    weather_code: int
-    weather_icons: List[HttpUrl]
-    weather_descriptions: List[str]
-    wind_speed: int
+    last_updated_epoch: int
+    last_updated: str
+    temp_c: float
+    temp_f: float
+    is_day: int
+    condition: Condition
+    wind_mph: float
+    wind_kph: float
     wind_degree: int
     wind_dir: str
-    pressure: int
-    precip: float
+    pressure_mb: float
+    pressure_in: float
+    precip_mm: float
+    precip_in: float
     humidity: int
-    cloudcover: int
-    feelslike: int
-    uv_index: int
-    visibility: int
-    is_day: str
+    cloud: int
+    feelslike_c: float
+    feelslike_f: float
+    vis_km: float
+    vis_miles: float
+    uv: float
+    gust_mph: float
+    gust_kph: float
+
 class ApiData(BaseModel):
     """ Clase de validación principal
     de la respuesta de la API, emplea
@@ -89,7 +93,6 @@ class ApiData(BaseModel):
     En caso de ser correctos, la lectura de la API
     es almacenada en la coleccion 'api_data'
     """
-    request: Request
     location: Location
     current: Current
 

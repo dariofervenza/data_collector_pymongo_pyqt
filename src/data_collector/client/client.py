@@ -27,6 +27,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QTimer
 
 from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QPixmap
 
 from auth import AuthWindow
 from graphs import GraficosWidget
@@ -40,12 +41,13 @@ from qfluentwidgets import setTheme, Theme, setThemeColor, setFont, FluentThemeC
 from qfluentwidgets import FluentWindow
 from qfluentwidgets import FluentIcon as FIF
 from qfluentwidgets import NavigationItemPosition
+from qfluentwidgets import AvatarWidget
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -54,10 +56,7 @@ __status__ = "Development"
 BASE_DIR = os.getcwd()
 IMAGES_FOLDER = os.path.join(BASE_DIR, "images")
 LOGO = os.path.join(IMAGES_FOLDER, "logo.png")
-HOME = os.path.join(IMAGES_FOLDER, "home.png")
-GRAPH = os.path.join(IMAGES_FOLDER, "graph.png")
-ALERTS = os.path.join(IMAGES_FOLDER, "alerts.png")
-ANALYTICS = os.path.join(IMAGES_FOLDER, "analytics.png")
+AVATAR = os.path.join(IMAGES_FOLDER, "anonymous.jpg")
 STYLE = Path("style/style.qss").read_text()
 
 class MainWindow(FluentWindow):
@@ -71,33 +70,6 @@ class MainWindow(FluentWindow):
         self.setWindowIcon(QIcon(LOGO))
         self.token = None
         self.server_ip = "localhost"
-
-        """menu_bar = self.menuBar()
-        archivo_menu = menu_bar.addMenu("Archivo")
-        ayuda_menu = menu_bar.addMenu("&Ayuda")
-
-        archivo_menu.addAction("Cerrar", self.close)
-        url = "https://github.com/dariofervenza"
-        funcion_parcial_github = partial(self.open_webbrowser, url)
-        abrir_github_action = QAction("Abrir github", self)
-        abrir_github_action.triggered.connect(funcion_parcial_github)
-        ayuda_menu.addAction(abrir_github_action)"""
-
-        """print("toolb bar")
-        tool_bar = ToolBar()
-        tool_bar.setStyleSheet(STYLE)
-        self.addToolBar(tool_bar)"""
-
-        """status_bar = StatusBar()
-        self.setStatusBar(status_bar)"""
-
-
-        """print("central widget")
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)"""
-
-
-        #self.stacket_widget = QStackedWidget(self, objectName='homeInterface')
 
 
         print("main widget")
@@ -119,26 +91,6 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.alarmas_widget, FIF.INFO, 'Alarmas')
         self.addSubInterface(self.analytics_widget, FIF.HISTORY, 'Analytics')
 
-        """self.stacket_widget.addWidget(self.main_widget)
-        self.stacket_widget.addWidget(self.graficos_widget)
-        self.stacket_widget.addWidget(self.alarmas_widget)
-        self.stacket_widget.addWidget(self.analytics_widget)
-        self.stacket_widget.setCurrentIndex(0)"""
-
-        """layout = QVBoxLayout()
-        layout.addWidget(self.stacket_widget, stretch=1)
-        self.central_widget.setLayout(layout)"""
-
-        """tool_bar.mostrar_pantalla_de_inicio_signal.connect(
-            self.return_to_home
-            )
-        tool_bar.mostrar_graficos_signal.connect(status_bar.mostrar_graficos)
-        tool_bar.mostrar_graficos_signal.connect(self.change_to_graficos_widget)
-        tool_bar.mostrar_alarmas_signal.connect(status_bar.mostrar_alarmas)
-        tool_bar.mostrar_alarmas_signal.connect(self.change_to_alarmas_widget)
-        tool_bar.mostrar_analytics_signal.connect(status_bar.mostrar_analytics)
-        tool_bar.mostrar_analytics_signal.connect(self.change_to_analytics_widget)
-        self.alarmas_widget.alarma_anadida_signal.connect(status_bar.anadir_alarma)"""
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.print_focused_widget)
@@ -164,28 +116,7 @@ class MainWindow(FluentWindow):
         al presionar el menu de ayuda
         """
         webbrowser.open(url)
-    def return_to_home(self):
-        """ Cambia el stacked widget a
-        el main widget
-        """
-        self.stacket_widget.setCurrentIndex(0)
-    def change_to_graficos_widget(self):
-        """ Hace switch a el widget de mostrar
-        graficos cuando se pulsa el boton de los graficos
-        en la toolbar. Esta toolbar envia señal para
-        activar esta funcion
-        """
-        self.stacket_widget.setCurrentIndex(1)
-    def change_to_alarmas_widget(self):
-        """ Cambia el stacked widget a
-        el alarmas widget
-        """
-        self.stacket_widget.setCurrentIndex(2)
-    def change_to_analytics_widget(self):
-        """ Cambia el stacked widget a
-        el analytics widget
-        """
-        self.stacket_widget.setCurrentIndex(3)
+
 
 if __name__ == "__main__":
     #user_dict = {"usuario" : "paco", "contraseña" : "paco"}

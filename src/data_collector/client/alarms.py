@@ -47,7 +47,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -102,15 +102,14 @@ class AlarmasWidget(QWidget):
         self.titulo_tipo_dato_alarma = QLabel("Tipo de dato")
         self.tipo_de_dato_combo_box = ComboBox()
         lista_datos = [
-            "temperature",
-            "wind_speed",
-            "pressure",
-            "precip",
+            "temp_c",
+            "wind_kph",
+            "pressure_mb",
+            "precip_mm",
             "humidity",
-            "cloudcover",
-            "feelslike",
-            "uv_index",
-            "visibility",
+            "cloud",
+            "feelslike_c",
+            "uv",
             ]
         for element in lista_datos:
             self.tipo_de_dato_combo_box.addItem(element)
@@ -276,10 +275,13 @@ class AlarmasWidget(QWidget):
         self.fecha_avisos_date_edit.setDateFormat("dd-MM-yyyy")
         self.fecha_avisos_date_edit.setContentsMargins(10, 10, 10, 10)
         self.tipo_df_avisos = ComboBox()
-        self.tipo_df_avisos.addItem("Todas las alarmas")
-        self.tipo_df_avisos.addItem("Set reducido de alarmas las alarmas")
+        self.tipo_df_avisos.addItem("Todas los avisos")
+        self.tipo_df_avisos.addItem("Set reducido de avisos")
+        self.tipo_df_avisos.setCurrentIndex(1)
         numero_de_horas_entre_avisos_label = BodyLabel("Número de horas entre avisos")
-        self.numero_de_horas_entre_avisos = QSpinBox(minimum=1, maximum=100)
+        self.numero_de_horas_entre_avisos = SpinBox(self.tab_avisos)
+        self.numero_de_horas_entre_avisos.setValue(3)
+        self.numero_de_horas_entre_avisos.setMaximum(5000)
 
         layout_tab_de_avisos = QGridLayout()
         layout_tab_de_avisos.addWidget(self.avisos_tree, 0, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
@@ -303,7 +305,8 @@ class AlarmasWidget(QWidget):
         self.setLayout(main_layout)
     async def intercambiar_info_con_server(self, request):
         uri = f"ws://{self.server_ip}:8765"
-        async with websockets.connect(uri) as websocket:
+        custom_message_size = 1024*1024*5
+        async with websockets.connect(uri, max_size=custom_message_size) as websocket:
             await websocket.send(request)
             response = await websocket.recv()
             await websocket.close()
@@ -482,68 +485,10 @@ class AlarmasWidget(QWidget):
             )
         df.reset_index(drop=True, inplace=True)
         # VAMOS A MOSTRAR SOLO LOS AVISOS QUE TENGAN COMO MINIMO 8 HORAS DE DIFERENCIA
-        list_tipo_alarma = []
-        list_dato_afectado = []
-        list_ciudad = []
-        list_valor_alarma = []
-        list_valor_dato = []
-        list_fecha_alarma = []
-        list_fecha_dato = []
-        tomar_siguiente_dato = True
-        for indice, fila in df.iterrows():
-            if indice == 0:
-                list_tipo_alarma.append(fila["tipo_alarma"])
-                list_dato_afectado.append(fila["dato_afectado"])
-                list_ciudad.append(fila["ciudad"])
-                list_valor_alarma.append(fila["valor_alarma"])
-                list_valor_dato.append(fila["valor_dato"])
-                list_fecha_alarma.append(fila["fecha_alarma"])
-                list_fecha_dato.append(fila["fecha_dato"])
-            else:
-                if tomar_siguiente_dato:
-                    minimum_date = fila["fecha_dato"]
-                    tomar_siguiente_dato = False
-                if df.iloc[indice - 1]["ciudad"] == fila["ciudad"]:
-                    if df.iloc[indice - 1]["tipo_alarma"] == fila["tipo_alarma"]:
-                        if df.iloc[indice - 1]["dato_afectado"] == fila["dato_afectado"]:
-                            if (fila["fecha_dato"] - minimum_date).total_seconds() / 3600 > 16:
-                                #print((fila["fecha_dato"] - minimum_date).total_seconds() / 3600)
-                                list_tipo_alarma.append(fila["tipo_alarma"])
-                                list_dato_afectado.append(fila["dato_afectado"])
-                                list_ciudad.append(fila["ciudad"])
-                                list_valor_alarma.append(fila["valor_alarma"])
-                                list_valor_dato.append(fila["valor_dato"])
-                                list_fecha_alarma.append(fila["fecha_alarma"])
-                                list_fecha_dato.append(fila["fecha_dato"])
-                                tomar_siguiente_dato = True
-                        else:
-                            tomar_siguiente_dato = True
-                    else:
-                        tomar_siguiente_dato = True                        
-                else:
-                    list_tipo_alarma.append(fila["tipo_alarma"])
-                    list_dato_afectado.append(fila["dato_afectado"])
-                    list_ciudad.append(fila["ciudad"])
-                    list_valor_alarma.append(fila["valor_alarma"])
-                    list_valor_dato.append(fila["valor_dato"])
-                    list_fecha_alarma.append(fila["fecha_alarma"])
-                    list_fecha_dato.append(fila["fecha_dato"])
-        data = {
-            "tipo_alarma" : list_tipo_alarma,
-            "dato_afectado" : list_dato_afectado,
-            "ciudad" : list_ciudad,
-            "valor_alarma" : list_valor_alarma,
-            "valor_dato" : list_valor_dato,
-            "fecha_alarma" : list_fecha_alarma,
-            "fecha_dato" : list_fecha_dato,
-            }
-        df = pd.DataFrame(data)
-        df["fecha_dato"] = pd.to_datetime(df["fecha_dato"])
-        df = df.sort_values(
-            by=["ciudad", "tipo_alarma",  "dato_afectado", "valor_alarma", "fecha_dato"],
-            ascending=True
-            )
-        df.reset_index(drop=True, inplace=True)
+        tipo_df_avisos = self.tipo_df_avisos.currentText()
+        if tipo_df_avisos == "Set reducido de avisos":
+            numero_de_horas_entre_avisos = self.numero_de_horas_entre_avisos.value()
+            df = self.set_reducido_de_avisos_filtrar(df, numero_de_horas_entre_avisos)
         ciudades = df["ciudad"].unique()
         self.avisos_tree.clear()
         for ciudad in ciudades:
@@ -574,3 +519,72 @@ class AlarmasWidget(QWidget):
         ## tree view de alarms
         ## añade que al eliminar una alarma elimine sus avisos
         self.boton_leer_avisos.setEnabled(True)
+    def set_reducido_de_avisos_filtrar(self, df: pd.DataFrame, numero_de_horas_entre_avisos: int):
+        list_tipo_alarma = []
+        list_dato_afectado = []
+        list_ciudad = []
+        list_valor_alarma = []
+        list_valor_dato = []
+        list_fecha_alarma = []
+        list_fecha_dato = []
+        tomar_siguiente_dato = True
+        print("df original avisos")
+        print(len(df))
+        for indice, fila in df.iterrows():
+            if indice == 0:
+                list_tipo_alarma.append(fila["tipo_alarma"])
+                list_dato_afectado.append(fila["dato_afectado"])
+                list_ciudad.append(fila["ciudad"])
+                list_valor_alarma.append(fila["valor_alarma"])
+                list_valor_dato.append(fila["valor_dato"])
+                list_fecha_alarma.append(fila["fecha_alarma"])
+                list_fecha_dato.append(fila["fecha_dato"])
+            else:
+                if tomar_siguiente_dato:
+                    minimum_date = fila["fecha_dato"]
+                    tomar_siguiente_dato = False
+                if df.iloc[indice - 1]["ciudad"] == fila["ciudad"]:
+                    if df.iloc[indice - 1]["tipo_alarma"] == fila["tipo_alarma"]:
+                        if df.iloc[indice - 1]["dato_afectado"] == fila["dato_afectado"]:
+                            if (fila["fecha_dato"] - minimum_date).total_seconds() / 3600 >= numero_de_horas_entre_avisos:
+                                #print((fila["fecha_dato"] - minimum_date).total_seconds() / 3600)
+                                list_tipo_alarma.append(fila["tipo_alarma"])
+                                list_dato_afectado.append(fila["dato_afectado"])
+                                list_ciudad.append(fila["ciudad"])
+                                list_valor_alarma.append(fila["valor_alarma"])
+                                list_valor_dato.append(fila["valor_dato"])
+                                list_fecha_alarma.append(fila["fecha_alarma"])
+                                list_fecha_dato.append(fila["fecha_dato"])
+                                tomar_siguiente_dato = True
+                        else:
+                            tomar_siguiente_dato = True
+                    else:
+                        tomar_siguiente_dato = True
+                else:
+                    list_tipo_alarma.append(fila["tipo_alarma"])
+                    list_dato_afectado.append(fila["dato_afectado"])
+                    list_ciudad.append(fila["ciudad"])
+                    list_valor_alarma.append(fila["valor_alarma"])
+                    list_valor_dato.append(fila["valor_dato"])
+                    list_fecha_alarma.append(fila["fecha_alarma"])
+                    list_fecha_dato.append(fila["fecha_dato"])
+                    tomar_siguiente_dato = True
+        data = {
+            "tipo_alarma" : list_tipo_alarma,
+            "dato_afectado" : list_dato_afectado,
+            "ciudad" : list_ciudad,
+            "valor_alarma" : list_valor_alarma,
+            "valor_dato" : list_valor_dato,
+            "fecha_alarma" : list_fecha_alarma,
+            "fecha_dato" : list_fecha_dato,
+            }
+        df = pd.DataFrame(data)
+        df["fecha_dato"] = pd.to_datetime(df["fecha_dato"])
+        df = df.sort_values(
+            by=["ciudad", "tipo_alarma",  "dato_afectado", "valor_alarma", "fecha_dato"],
+            ascending=True
+            )
+        df.reset_index(drop=True, inplace=True)
+        print(len(df))
+        return df
+
