@@ -1,0 +1,300 @@
+QMainWindow {
+    background-color: #ecf0f1;  /* Light Gray Background */
+}
+
+/* Toolbars */
+QToolBar {
+    background-color: #3498db93;  /* Blue Background */
+    color: white;
+    border: 1px solid #297fb9da;  /* Darker Blue Border */
+    spacing: 3px;
+}
+
+QToolBar QToolButton {
+    background-color: #297fb99c;  /* Darker Blue Background */
+    border: 1px solid #1f618dc7;  /* Even darker Blue Border */
+    color: white;
+    padding: 5px;
+}
+
+QToolBar QToolButton:hover {
+    background-color: #1f618dbe;  /* Even darker Blue Background for hover effect */
+}
+
+/* Menus */
+QMenu {
+    background-color: #ecf0f1;  /* Light Gray Background */
+    border: 1px solid #bdc3c7;  /* Light Gray Border */
+}
+
+QMenu::item {
+    padding: 5px 15px;
+}
+
+QMenu::item:selected {
+    background-color: #3498db;  /* Blue Background for selected item */
+    color: white;
+}
+
+/* Push Buttons */
+QPushButton {
+    background-color: #4CAF50;  /* Green Background */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+}
+
+QPushButton:hover {
+    background-color: #45a049;  /* Darker Green Background for hover effect */
+}
+
+
+
+QLabel {
+    color: #333;
+}
+
+QGroupBox::title {
+    font-size: 25px;
+    font-weight: bold;
+}
+
+#aviso_forecast_unica_0, #aviso_forecast_unica_1, #aviso_forecast_unica_2{
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+
+}
+
+QTabWidget {
+    background-color: #ecf0f1;  /* Light Gray Background */
+    border: 1px solid #bdc3c7;  /* Light Gray Border */
+    border-radius: 5px;
+}
+
+QTabBar::tab {
+    background-color: #5fa6d4;  /* Blue Background */
+    color: white;
+    border: 1px solid #297fb9d0;  /* Darker Blue Border */
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    padding: 8px;
+}
+
+QTabBar::tab:selected {
+    background-color: #297fb9;  /* Darker Blue Background for Selected Tab */
+    color: white;
+}
+
+QTabBar::tab:hover {
+    background-color: #1f618d;  /* Even darker Blue Background for Hover Effect */
+}
+
+QTabWidget::pane {
+    border-top: 1px solid #297fb9f5;  /* Darker Blue Border for the pane */
+}
+
+QTabWidget::tab-bar {
+    align-content: center;
+
+}
+
+QComboBox {
+    background-color: #ecf0f1;  /* Light Gray Background */
+    border: 1px solid #bdc3c7;  /* Light Gray Border */
+    border-radius: 5px;
+    padding: 5px;
+    min-width: 150px;  /* Adjust the minimum width as needed */
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 20px;  /* Adjust the width of the drop-down button as needed */
+}
+
+/*QComboBox::down-arrow {
+    image: url(images/arrow_down.png); 
+}*/
+
+/*QComboBox::down-arrow:on {
+   
+}
+
+QComboBox::down-arrow:off {
+    
+}*/
+
+QComboBox::item {
+    padding: 8px;
+}
+
+QComboBox::item:selected {
+    background-color: #3498db;  /* Blue Background for the selected item */
+    color: white;
+}
+
+QComboBox::item:hover {
+    background-color: #2980b9;  /* Darker Blue Background for hover effect */
+    color: white;
+}
+
+QSpinBox {
+    background-color: #ecf0f1;  /* Light Gray Background */
+    border: 1px solid #bdc3c7;  /* Light Gray Border */
+    border-radius: 5px;
+    padding: 5px;
+    min-width: 80px;  /* Adjust the minimum width as needed */
+}
+
+QSpinBox::up-button, QSpinBox::down-button {
+    background-color: #3498dba8;  /* Blue Background for the up and down buttons */
+    border: 1px solid #297fb9d2;  /* Darker Blue Border */
+    border-radius: 5px;
+    min-width: 16px;  /* Adjust the minimum width of the buttons as needed */
+}
+
+/*QSpinBox::up-arrow, QSpinBox::down-arrow {
+    image: url(path/to/arrow-up-down.png);  
+    width: 12px;  
+}*/
+
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background-color: #297fb985; 
+}
+
+QSpinBox::up-button:pressed, QSpinBox::down-button:pressed {
+    background-color: #1f618da6;  /* Even darker Blue Background for pressed effect on buttons */
+    border: 1px solid #154360b2;  /* Even darker Blue Border */
+}
+
+/*QSpinBox::up-arrow:on, QSpinBox::down-arrow:on {
+    
+}*/
+
+QTableWidget {
+    background-color: #ecf0f1;  /* Light Gray Background */
+    alternate-background-color: #f2f2f2;  /* Alternate Light Gray Background for alternate rows */
+    selection-background-color: #419bd8;  /* Blue Background for selected items */
+    selection-color: white;
+    border: 1px solid #bdc3c7;  /* Light Gray Border */
+    gridline-color: #bdc3c7;  /* Light Gray Gridlines */
+}
+
+QTableWidget::item {
+    padding: 5px;
+}
+
+QHeaderView::section {
+    background-color: #58a2d3;  /* Blue Background for header sections */
+    color: white;
+    padding: 5px;
+    border: 1px solid #297fb9c4;  /* Darker Blue Border */
+}
+
+QHeaderView::section:checked {
+    background-color: #297fb9c7;  /* Darker Blue Background for checked header sections */
+}
+
+QHeaderView::section:hover {
+    background-color: #3b87b9;  /* Darker Blue Background for hover effect on header sections */
+}
+
+QTableWidget::horizontalHeader {
+    border-bottom: 2px solid #5c95bb;  /* Darker Blue Border for horizontal header */
+}
+
+QTableWidget::verticalHeader {
+    border-right: 2px solid #5c95bb;  /* Darker Blue Border for vertical header */
+}
+
+QTableWidget::item:selected {
+    background-color: #297fb9;  /* Darker Blue Background for selected items */
+    color: white;
+}
+
+QTableWidget::item:hover {
+    background-color: #1f618df5;  /* Even darker Blue Background for hover effect on items */
+    color: white;
+}
+
+QTreeView {
+    background-color: #ecf0f1;  /* Light Gray Background */
+    alternate-background-color: #f2f2f2;  /* Alternate Light Gray Background for alternate rows */
+    selection-background-color: #4e9ed4;  /* Blue Background for selected items */
+    selection-color: white;
+    border: 1px solid #bdc3c7;  /* Light Gray Border */
+    show-decoration-selected: 1;
+}
+
+QTreeView::item {
+    padding: 5px;
+}
+
+QHeaderView::section {
+    background-color: #61abdb;  /* Blue Background for header sections */
+    color: white;
+    padding: 5px;
+    border: 1px solid #297fb9cc;  /* Darker Blue Border */
+}
+
+QHeaderView::section:checked {
+    background-color: #297fb9;  /* Darker Blue Background for checked header sections */
+}
+
+QHeaderView::section:hover {
+    background-color: #297fb9;  /* Darker Blue Background for hover effect on header sections */
+}
+
+QTreeView::branch:selected, QTreeView::branch:has-siblings:selected {
+    background-color: #489ed8;  /* Blue Background for selected branch items */
+}
+
+QTreeView::item:selected, QTreeView::item:has-siblings:selected {
+    background-color: #4f90bb;  /* Darker Blue Background for selected items */
+    color: white;
+}
+
+QTreeView::item:hover {
+    background-color: #1f618d;  /* Even darker Blue Background for hover effect on items */
+    color: white;
+}
+
+QGroupBox {
+    border: 2px solid #3498dbcc;  /* Blue Border */
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 0 5px;
+    background-color: #5ba7da;  /* Blue Background for the title */
+    color: white;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    font-size: 18px;
+}
+/* QTableWidget */
+QTableWidget {
+    color: black;  /* Set font color to black */
+}
+
+/* QTableWidget headers */
+QTableWidget::horizontalHeader {
+    color: black;  /* Set font color to black */
+}
+
+QTableWidget::verticalHeader {
+    color: black;  /* Set font color to black */
+}
+
+/* QTreeView */
+QTreeView {
+    color: black;  /* Set font color to black */
+}
+
+/* QTreeView headers */
+QTreeView::header {
+    color: black;  /* Set font color to black */
+}
