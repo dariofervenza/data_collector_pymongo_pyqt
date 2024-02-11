@@ -42,9 +42,9 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 	Redesigned Graphs widget - now you can add, remove and resize plots\
 	Solved a bug where you couldn't move the vertical scroll bar\
 2024-21-01:\
-	Switched to weatherapi.com API
-        Continued implementing fluentDesign (not finished)
-        More UI changes
+	Switched to weatherapi.com API\
+        Continued implementing fluentDesign (not finished)\
+        More UI changes\
 2024-11-02:\
 	Patched some bugs\
 	Improved UI\
@@ -52,7 +52,7 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 	Added rabitMQ to decouple api response from the server\
 	Now the analitics figures are stored in a redis db\
 	Now alarm notifications are created when the data is added to the db\
-	Some other minor changes\
+	Some other minor changes
 
 
 ### Future features
