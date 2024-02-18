@@ -55,8 +55,8 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 	Now alarm notifications are created when the data is added to the db\
 	Some other minor changes\
 2024-18-02:\
-	Added filter functions to graphs widget
-	Improved code with pylint
+	Added filter functions to graphs widget\
+	Improved code with pylint\
 	Added MIT license
 	
 
