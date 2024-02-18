@@ -11,22 +11,20 @@ Clases:
     - Datos de una alarma (Alarma)
     - Datos de un aviso (Avisos)
 """
-
-from typing import List
 from typing import Any
 from datetime import datetime
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
+# from pydantic import HttpUrl
 from bson import ObjectId
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
-
 
 class Usuario(BaseModel):
     """ Valida que los tiposde los datos de
@@ -39,9 +37,12 @@ class Usuario(BaseModel):
         nuevos usuarios
     """
     usuario: str
-    contraseña: str
+    contrasenha: str
     tipo_user: str
 class Condition(BaseModel):
+    """ Comprueba los tipos del campo
+    condition de la respuesta de la API
+    """
     text: str
     icon: str
     code: int
@@ -129,4 +130,7 @@ class Avisos(BaseModel):
     valor_aviso: Any
     revisado: bool
     class Config:
+        """ Configuracion para poder añadir
+        el tipo Any a la clase Avisos
+        """
         arbitrary_types_allowed = True

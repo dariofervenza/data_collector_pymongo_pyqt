@@ -5,25 +5,25 @@ y arranca el servidor
 """
 import json
 import asyncio
+import pickle
+from typing import List
+from typing import Dict
+from typing import NoReturn
 from functools import partial
 from datetime import datetime
-import requests
 import websockets
-from websockets.server import WebSocketServer
-import pickle
 import jwt
-from datetime import datetime
+import matplotlib
 from aiormq import connect
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from redis import asyncio as aioredis
-import matplotlib
-
+from motor.motor_asyncio import AsyncIOMotorCollection
 from data_validation import ApiData
 from server_alarms import add_alarm
 from server_alarms import return_alarms
 from server_alarms import delete_alarms
 from server_alarms import return_avisos
-from server_alarms import create_todos_los_avisos
+# from server_alarms import create_todos_los_avisos
 from server_alarms import create_avisos_event
 from server_auth import insert_user
 from server_auth import autenticar
@@ -34,29 +34,28 @@ from server_analytics import create_correlaciones_fig
 from server_analytics import create_train_test_split
 from server_analytics import forecasting_serie_unica
 from server_analytics import backtesting_serie_unica
-
 from config import (
     DATA_COLLECTION, USERS_COLLECTION,
     ROOT_USER, ROOT_PASSWORD,
     SECRET_KEY,
     ALARMS_COLLECTION,
-    AVISOS_COLLECTION,
-    LISTA_CIUDADES,
-)
-
+    AVISOS_COLLECTION)
+# from config import LISTA_CIUDADES
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
 
-
-
-async def receive_messages():
+async def receive_messages() -> None:
+    """ Recibe los datos de la Api a traves
+    de una cola de RabitMQ y los envía a
+    una callback
+    """
     connection = await connect("amqp://guest:guest@localhost/")
     channel = await connection.channel()
     declare_ok = await channel.queue_declare('api')
@@ -68,11 +67,13 @@ async def receive_messages():
         await callback(message)
         # borrar mensaje
         await channel.basic_ack(message.delivery.delivery_tag)
-    consume_ok = await channel.basic_consume(
+    await channel.basic_consume(
         declare_ok.queue, callback, no_ack=True
     )
     # no_ack=True para borrar los mensajes
-async def callback(message):
+async def callback(message: str) -> None:
+    """ Guarda los datos en la base de datos MongoDB
+    """
     mensaje = json.loads(message.body)
     ciudad = mensaje["ciudad"]
     data = mensaje["data"]
@@ -80,12 +81,12 @@ async def callback(message):
     await create_avisos_event(
         alarms_collection=ALARMS_COLLECTION,
         avisos_collection=AVISOS_COLLECTION,
-        data_collection=DATA_COLLECTION, 
+        data_collection=DATA_COLLECTION,
         api_response=data
         )
 
-
-async def insert_api_data_in_mongo(api_response, ciudad:str):
+async def insert_api_data_in_mongo(api_response: Dict,
+    ciudad:str) -> None:
     """ Funcion lanzada con un async scheduler, hace la
     request a la API de weather stack y almacena los
     datos en una colección de MongoDB
@@ -132,7 +133,11 @@ async def insert_api_data_in_mongo(api_response, ciudad:str):
         print(f"Server ha añadido a la db: {ciudad}")
     else:
         print("Dato ya existe en la db")
-async def save_to_redis(lista_ciudades, my_col):
+async def save_to_redis(lista_ciudades: List[str],
+    my_col: AsyncIOMotorCollection) -> None:
+    """ DEPRECATED WARNING:
+            Now its running in a celery thread
+    """
     redis = await aioredis.from_url("redis://localhost:6379")
     lista_dfs_resampled = await read_data_from_db(lista_ciudades, my_col)
     items = lista_dfs_resampled[0].columns[: 3]
@@ -172,17 +177,16 @@ async def save_to_redis(lista_ciudades, my_col):
     await redis.delete("figuras_backtesting_serie_unica")
     for fig in lista_figuras_backtest_unica:
         fig_serialized = pickle.dumps(fig)
-
-
-
+        await redis.rpush("figuras_backtesting_serie_unica", fig_serialized)
     await redis.aclose()
     matplotlib.pyplot.close()
-    print("guardado en redis")  
+    print("guardado en redis")
 
-async def receive_client_query_and_send_db_result(my_col, users_collection,
-                                                  secret_key, alarms_collection,
-                                                  avisos_collection,
-                                                  websocket):
+async def receive_client_query_and_send_db_result(
+    my_col: AsyncIOMotorCollection, users_collection: AsyncIOMotorCollection,
+    secret_key: str, alarms_collection: AsyncIOMotorCollection,
+    avisos_collection: AsyncIOMotorCollection,
+    websocket: websockets.WebSocketClientProtocol):
     """ Handler del server con websockets, recibe las peticiones
     en forma de {"tipo_request" : tipo_request, "value" : valor_request}
     Es usada con "partial" de functools para dejar unicamente
@@ -291,8 +295,6 @@ async def receive_client_query_and_send_db_result(my_col, users_collection,
                 lista_avisos = await return_avisos(
                     avisos_collection,
                     fecha_avisos,
-                    my_col,
-                    alarms_collection,
                     user)
                 print(f"control hora4: {datetime.now()}")
                 lista_avisos = json.dumps(lista_avisos, default=str)
@@ -319,12 +321,10 @@ async def receive_client_query_and_send_db_result(my_col, users_collection,
         print("conexion cerrada por el client")
 
 
-async def main():
+async def main() -> NoReturn:
     """ Función principal del server,
-    lanza los procesos en background como async schedulers,
-    es decir, insertar los daots de la API de weather stack,
-    y crear los avisos (en un futuro los avisos pasarán a
-    crearse cuando se añada un dato).
+    Lanza el proceso de lectura de la cola de RabitMQ
+    y guarda los datos en la base de datos de Mongo
     Lanza el handler del server con webosckets.
     """
     tipo_user = "admin"
@@ -338,18 +338,15 @@ async def main():
         AVISOS_COLLECTION
         )
     scheduler = AsyncIOScheduler()
-    #ajustar a 21 * 3 datos al dia para 1000 request/mes
-    # es decir cada 144 min
     scheduler.add_job(
         receive_messages
         )
-    scheduler.add_job(
+    """scheduler.add_job(
         save_to_redis, # VALORAR MOVERLO A CELERY PARA QUE NO BLOQUEE EL SERVER
         "interval",
-        minutes=15,
+        minutes=60,
         args=[LISTA_CIUDADES, DATA_COLLECTION]
-        )
-    # NOTA: Cambiar esto, los avisos se crean al añadir un dato
+        )"""
     """scheduler.add_job(
         create_todos_los_avisos,
         "interval",
@@ -360,6 +357,5 @@ async def main():
     print("AÑADIDOS SCHEDULERS")
     async with websockets.serve(partial_handler, "0.0.0.0", 8765):
         await asyncio.Future()
-
 if __name__ == "__main__":
     asyncio.run(main())

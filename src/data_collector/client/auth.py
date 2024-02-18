@@ -9,13 +9,9 @@ from pathlib import Path
 import websockets
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QStackedWidget
-from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QCompleter
-from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QVBoxLayout
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtWidgets import QMessageBox
 
 from PyQt5.QtGui import QIcon
 
@@ -35,16 +31,14 @@ from qfluentwidgets import LineEdit
 from qfluentwidgets import SearchLineEdit
 from qfluentwidgets import FluentIcon as FIF
 
-
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
-
 
 BASE_DIR = os.getcwd()
 IMAGES_FOLDER = os.path.join(BASE_DIR, "images")
@@ -54,7 +48,6 @@ GRAPH = os.path.join(IMAGES_FOLDER, "graph.png")
 ALERTS = os.path.join(IMAGES_FOLDER, "alerts.png")
 ANALYTICS = os.path.join(IMAGES_FOLDER, "analytics.png")
 STYLE = Path("style/style.qss").read_text()
-
 
 class AuthWindow(QWidget):
     """ Primera ventana que se abre
@@ -209,27 +202,12 @@ class AuthWindow(QWidget):
         self.thread_response = thread_response
         self.token = self.worker.token
         if self.thread_response == "Dirección del servidor inválida":
-            """QMessageBox.critical(
-                self,
-                "Error",
-                "Dirección del servidor inválida"
-                )"""
             error = MensajeError("Dirección del servidor inválida", self)
             error.exec()
         elif self.thread_response == "Comprueba usuario y contraseña":
-            """QMessageBox.critical(
-                self,
-                "Error",
-                "Comprueba usuario y contraseña"
-                )"""
             error2 = MensajeError("Comprueba usuario y contraseña", self)
             error2.exec()
         elif self.thread_response == "No es posible realizar la conexión con el servidor":
-            """QMessageBox.critical(
-                self,
-                "Error",
-                "No es posible realizar la conexión con el servidor"
-                )"""
             error3 = MensajeError("No es posible realizar la conexión con el servidor", self)
             error3.exec()
         elif self.token \
@@ -266,7 +244,8 @@ class AuthWorker(QRunnable):
     identificar si ha habido un error o se puede
     lanzar la mainwindow de la GUI.
     """
-    def __init__(self, server_ip, username, password):
+    def __init__(self, server_ip: str,
+        username: str, password: str):
         super().__init__()
         self.server_ip = server_ip
         self.username = username
@@ -275,7 +254,10 @@ class AuthWorker(QRunnable):
         self.response = None
         self.token = None
     @Slot()
-    def run(self):
+    def run(self) -> None:
+        """ Lanza un thread para comunicarse con el servidor
+        y comprobar usuario y contraseña
+        """
         response = asyncio.run(
             self.obtain_token(self.username, self.password)
             )
@@ -283,9 +265,8 @@ class AuthWorker(QRunnable):
     async def obtain_token(self, username: str, password: str) -> None:
         """ Realiza la conexion con websockets a el servidor
         """
-
         uri = f"ws://{self.server_ip}:8765"
-        user_dict = {"usuario" : username, "contraseña" : password}
+        user_dict = {"usuario" : username, "contrasenha" : password}
         request = {"tipo_request" : "login", "value" : user_dict}
         request = json.dumps(request)
         try:
@@ -308,10 +289,13 @@ class AuthWorker(QRunnable):
             response = "Dirección del servidor inválida"
         return response
 class MensajeError(MessageBoxBase):
-    def __init__(self, mensaje, parent):
+    """ Lanza un error cuando se ha introducido erroneamente
+    los datos del usuario o ha fallado la conexión con el
+    servidor
+    """
+    def __init__(self, mensaje: str, parent: QWidget):
         super().__init__(parent)
         self.titleLabel = SubtitleLabel('Error', self)
-
         icono = BodyLabel()
         icono_critical = QIcon.fromTheme('dialog-warning').pixmap(32, 32)
         icono.setPixmap(icono_critical)
@@ -323,8 +307,3 @@ class MensajeError(MessageBoxBase):
         self.yesButton.setText('Aceptar')
         self.hideCancelButton()
         #self.widget.setMinimumWidth(350)
-
-
-
-  
-

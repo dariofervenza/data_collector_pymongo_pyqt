@@ -5,6 +5,8 @@ Aqui se crean alarmas y se visualizan las notificaciones
 import os
 import json
 import asyncio
+from typing import Tuple
+from typing import List
 from pathlib import Path
 from datetime import datetime
 import numpy as np
@@ -13,14 +15,8 @@ import websockets
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QLabel
-from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QTabWidget
-from PyQt5.QtWidgets import QSpinBox
-from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtWidgets import QDateEdit
-from PyQt5.QtWidgets import QTableWidget
 from PyQt5.QtWidgets import QTableWidgetItem
-from PyQt5.QtWidgets import QTreeWidget
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QVBoxLayout
@@ -50,20 +46,17 @@ from qfluentwidgets import MenuAnimationType
 from qfluentwidgets import Action
 from qfluentwidgets import InfoBarIcon
 
-
 from graphs import MessageBoxFiltrar
 from general_functions import open_webbrowser
-
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
-
 
 BASE_DIR = os.getcwd()
 IMAGES_FOLDER = os.path.join(BASE_DIR, "images")
@@ -83,7 +76,7 @@ class AlarmasWidget(QWidget):
     QTree
     """
     alarma_anadida_signal = Signal(str)
-    def __init__(self):
+    def __init__(self, lista_ciudades: List[str]):
         super().__init__()
         self.token = None
         self.server_ip = "localhost"
@@ -93,13 +86,13 @@ class AlarmasWidget(QWidget):
         uno para añadir/eliminar/ver a alarmas, cada uno un grupo
         y otra para ver los avisos generados
         """
-
+        self.lista_ciudades = lista_ciudades
         self.df_my_notifications = pd.DataFrame()
         self.contextMenuEvent = self.menu_general # OJO
         self.filtro_actual_tabla_datos = "Todas las ciudades"
         self.primer_arranque = True
-
-
+        self.dialogo_filtrar_ciudad: MessageBoxFiltrar = None
+        self.ciudades_anadir_al_tree: List = None
 
         self.tab_alarmas_avisos = QTabWidget()
         self.tab_alarmas = QWidget()
@@ -137,7 +130,7 @@ class AlarmasWidget(QWidget):
 
         self.ciudad_alarma_label = QLabel("Ciudad")
         self.input_ciudad_alarma_combo_box = ComboBox()
-        self.lista_ciudades = ["Vigo", "Lugo", "Madrid"]
+
         for ciudad in self.lista_ciudades:
             self.input_ciudad_alarma_combo_box.addItem(ciudad)
         self.valor_alarma_label = QLabel("Valor alarma")
@@ -220,8 +213,8 @@ class AlarmasWidget(QWidget):
         self.tabla_ver_alarmas.setBorderRadius(8)
         self.tabla_ver_alarmas.setWordWrap(False)
         self.tabla_ver_alarmas.setRowCount(0)
-        self.tabla_ver_alarmas.setColumnCount(5) 
-        self.tabla_ver_alarmas.verticalHeader().hide()   
+        self.tabla_ver_alarmas.setColumnCount(5)
+        self.tabla_ver_alarmas.verticalHeader().hide()
         self.tabla_ver_alarmas.setFixedHeight(400)
 
         encabezado = ["", "Tipo de alarma", "Dato Afectado", "Ciudad", "Valor", "Fecha"]
@@ -233,13 +226,14 @@ class AlarmasWidget(QWidget):
             ToolTipFilter(self.boton_cargar_alarmas, 0, ToolTipPosition.TOP)
             )
         self.boton_cargar_alarmas.clicked.connect(self.obtener_alarmas_creadas)
-        self.boton_eliminar_alarmas = PrimaryPushButton(FIF.DELETE, "Eliminar alarmas seleccionadas", self)
+        self.boton_eliminar_alarmas = PrimaryPushButton(
+            FIF.DELETE, "Eliminar alarmas seleccionadas", self
+            )
         self.boton_eliminar_alarmas.clicked.connect(self.eliminar_alarmas_func)
         self.boton_eliminar_alarmas.setToolTip("Elimina las alarmas seleccionadas")
         self.boton_eliminar_alarmas.installEventFilter(
             ToolTipFilter(self.boton_eliminar_alarmas, 0, ToolTipPosition.TOP)
             )
-
         layout_ver_alarmas = QVBoxLayout()
         layout_ver_alarmas.addWidget(self.boton_cargar_alarmas)
         layout_ver_alarmas.addWidget(self.tabla_ver_alarmas)
@@ -249,7 +243,6 @@ class AlarmasWidget(QWidget):
             QSizePolicy.Expanding,
             QSizePolicy.Expanding
             )
-
         alarmas_widget_layout = QGridLayout()
         alarmas_widget_layout.addWidget(
             self.grupo_introduccion_alarma,
@@ -269,8 +262,6 @@ class AlarmasWidget(QWidget):
             )
         alarmas_widget_layout.setRowStretch(2, 1)
         self.tab_alarmas.setLayout(alarmas_widget_layout)
-
-
         self.boton_leer_avisos = PrimaryPushButton(FIF.UPDATE, "Leer avisos", self)
         self.boton_leer_avisos.clicked.connect(self.return_avisos_for_my_user)
         self.boton_leer_avisos.setToolTip("Recarga las notificaciones")
@@ -302,35 +293,47 @@ class AlarmasWidget(QWidget):
         self.numero_de_horas_entre_avisos = SpinBox(self.tab_avisos)
         self.numero_de_horas_entre_avisos.setValue(3)
         self.numero_de_horas_entre_avisos.setMaximum(5000)
-
         layout_tab_de_avisos = QGridLayout()
-        layout_tab_de_avisos.addWidget(self.avisos_tree, 0, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
-        layout_tab_de_avisos.addWidget(fecha_avisos_label, 1, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
-        layout_tab_de_avisos.addWidget(self.fecha_avisos_date_edit, 2, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
-        layout_tab_de_avisos.addWidget(numero_de_horas_entre_avisos_label, 4, 0, Qt.AlignmentFlag.AlignTop)
-        layout_tab_de_avisos.addWidget(self.numero_de_horas_entre_avisos, 4, 1, Qt.AlignmentFlag.AlignTop)
-
-
-        layout_tab_de_avisos.addWidget(self.boton_leer_avisos, 5, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
+        layout_tab_de_avisos.addWidget(
+            self.avisos_tree, 0, 0, 1, 2, Qt.AlignmentFlag.AlignTop
+            )
+        layout_tab_de_avisos.addWidget(
+            fecha_avisos_label, 1, 0, 1, 2, Qt.AlignmentFlag.AlignTop
+            )
+        layout_tab_de_avisos.addWidget(
+            self.fecha_avisos_date_edit, 2, 0, 1, 2, Qt.AlignmentFlag.AlignTop
+            )
+        layout_tab_de_avisos.addWidget(
+            numero_de_horas_entre_avisos_label, 4, 0, Qt.AlignmentFlag.AlignTop
+            )
+        layout_tab_de_avisos.addWidget(
+            self.numero_de_horas_entre_avisos, 4, 1, Qt.AlignmentFlag.AlignTop
+            )
+        layout_tab_de_avisos.addWidget(
+            self.boton_leer_avisos, 5, 0, 1, 2, Qt.AlignmentFlag.AlignTop
+            )
         layout_tab_de_avisos.setRowStretch(6, 1)
-
         self.tab_avisos.setLayout(layout_tab_de_avisos)
-
         self.tab_alarmas_avisos.addTab(self.tab_alarmas, "Alarmas")
         self.tab_alarmas_avisos.addTab(self.tab_avisos, "Avisos")
-
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.tab_alarmas_avisos)
         self.setLayout(main_layout)
-    def execute_initial_code(self):
+    def execute_initial_code(self) -> None:
+        """ Ejecuta las funciones para desplegar los datos
+        cuando el usuario se indentifica tras el login
+        """
         self.return_avisos_for_my_user()
         self.obtener_alarmas_creadas()
-    def showEvent(self, event):
+    def showEvent(self, event) -> None:
         pass
         """if self.primer_arranque:
             self.execute_initial_code()
             self.primer_arranque = False"""
-    def menu_general(self, event):
+    def menu_general(self, event) -> None:
+        """ Crea un menu cuando se hace click derecho en
+        la aplicacion
+        """
         menu = RoundMenu(parent=self)
         accion_cambiar_usuario = Action(FIF.UPDATE, "Cambiar usuario", shortcut="Ctrl+U")
         menu.addAction(accion_cambiar_usuario)
@@ -339,7 +342,9 @@ class AlarmasWidget(QWidget):
         accion_ayuda.triggered.connect(open_webbrowser)
         menu.addAction(accion_ayuda)
         menu.exec(self.mapToGlobal(event.pos()), aniType=MenuAnimationType.DROP_DOWN)
-    def menu_modificar_datos(self, event):
+    def menu_modificar_datos(self, event) -> None:
+        """ Crea un menu cuando se hace click derecho en la tabla de avisos
+        """
         menu = RoundMenu(parent=self)
         accion_exportar_a_excel = Action(FIF.DOCUMENT, 'Exportar', shortcut='Ctrl+E')
         accion_exportar_a_excel.triggered.connect(self.lanza_export_excel)
@@ -350,7 +355,6 @@ class AlarmasWidget(QWidget):
         accion_ayuda = Action(FIF.HELP, 'Help', shortcut='Ctrl+H')
         accion_ayuda.triggered.connect(open_webbrowser)
         menu.addAction(accion_ayuda)
-
         # add sub menu
         submenu = RoundMenu("Filtrar", self)
         submenu.setIcon(FIF.FILTER)
@@ -363,9 +367,7 @@ class AlarmasWidget(QWidget):
         ])
         menu.addMenu(submenu)
         menu.addSeparator()
-
-        menu.addAction(Action(f'Por añadir: REVISAR'))
-
+        menu.addAction(Action('Por añadir: REVISAR'))
         # insert actions
         menu.insertAction(
             menu.actions()[-1], Action(FIF.SETTING, 'Cambiar usuario', shortcut='Ctrl+U'))
@@ -378,23 +380,27 @@ class AlarmasWidget(QWidget):
         )
         menu.actions()[-2].setCheckable(True)
         menu.actions()[-2].setChecked(True)
-
-
         menu.exec(self.mapToGlobal(event.pos()), aniType=MenuAnimationType.DROP_DOWN)
-    def lanzar_filtro_ciudad(self):
-        self.dialogo_filtrar_ciudad = MessageBoxFiltrar(parent=self, lista_ciudades=self.lista_ciudades)
+    def lanzar_filtro_ciudad(self) -> None:
+        """ Ejecuta el filtro de la tabla de avisos por ciudad
+        """
+        self.dialogo_filtrar_ciudad = MessageBoxFiltrar(
+            parent=self, lista_ciudades=self.lista_ciudades
+            )
         self.dialogo_filtrar_ciudad.accepted.connect(self.filtrar_por_ciudad_func)
         self.dialogo_filtrar_ciudad.exec()
-
-    def filtrar_por_ciudad_func(self):
+    def filtrar_por_ciudad_func(self) -> None:
+        """ Contiene la lógica de filtrado de la tabla de avisos por ciudad
+        """
         ciudad = self.dialogo_filtrar_ciudad.ciudad_a_filtrar.currentText()
         self.filtro_actual_tabla_datos = ciudad
-
         df_maestro = self.df_my_notifications
         if ciudad != "Todas las ciudades":
             df_maestro = df_maestro.loc[df_maestro["ciudad"] == ciudad]
         self.anadir_avisos(self.ciudades_anadir_al_tree, df_maestro)
-    def lanza_export_excel(self):
+    def lanza_export_excel(self) -> None:
+        """ Exporta la tabla de avisos a excel
+        """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         file_path, _ = QFileDialog.getSaveFileName(
@@ -413,7 +419,7 @@ class AlarmasWidget(QWidget):
                 )
             try:
                 df_maestro.to_excel(file_path, index=False)
-            except Exception as e:
+            except Exception:
                 InfoBar.error(
                     title='Error',
                     content="Tipo de archivo no compatible, usar .xlsx",
@@ -423,8 +429,10 @@ class AlarmasWidget(QWidget):
                     # position='Custom',   # NOTE: use custom info bar manager
                     duration=4000,
                     parent=self
-                )        
-    async def intercambiar_info_con_server(self, request):
+                )
+    async def intercambiar_info_con_server(self, request: str):
+        """ Envia una petición al servidor y recibe la respuesta
+        """
         uri = f"ws://{self.server_ip}:8765"
         custom_message_size = 1024*1024*50
         async with websockets.connect(uri, max_size=custom_message_size) as websocket:
@@ -454,12 +462,12 @@ class AlarmasWidget(QWidget):
                     duration=1500,
                     parent=self
                     )
-                response = {"autenticado" : False}   
+                response = {"autenticado" : False}
             finally:
                 await websocket.close()
         return response
 
-    def anadir_alarma_func(self):
+    def anadir_alarma_func(self) -> None:
         """ Obtiene los datos de la alarma a añadir
         a partir de las combobox de la GUI y envia los datos
         al servidor empleando la corutina intercambiar_info_con_server
@@ -503,8 +511,7 @@ class AlarmasWidget(QWidget):
                 )
             self.obtener_alarmas_creadas()
         self.boton_anadir_alarma.setEnabled(True)
-        
-    def obtener_alarmas_creadas(self):
+    def obtener_alarmas_creadas(self) -> None:
         """ Solicita las alarmas creadas para un
         user al servidor, envia el token de sesion
         para identificar al user.
@@ -540,9 +547,9 @@ class AlarmasWidget(QWidget):
                     # position='Custom',   # NOTE: use custom info bar manager
                     duration=1500,
                     parent=self
-                )       
+                )
         self.boton_cargar_alarmas.setEnabled(True)
-    def anadir_lineas_de_alarmas_creadas(self, row):
+    def anadir_lineas_de_alarmas_creadas(self, row) -> None:
         """ Añade las alarmas recibidas por el metodo
         obtener_alarmas_creadas a la QTable.
         """
@@ -564,7 +571,7 @@ class AlarmasWidget(QWidget):
         for index, dato in enumerate(tupla):
             element = QTableWidgetItem(dato)
             self.tabla_ver_alarmas.setItem(lineas_actuales, index + 1, element)
-    def eliminar_alarmas_func(self):
+    def eliminar_alarmas_func(self) -> None:
         """ Lee las lineas de alarmas marcadas con el checkbox,
         recopila sus datos y las elimina de la GUI.
         Ademas envía la info al servidor con el metodo
@@ -613,7 +620,7 @@ class AlarmasWidget(QWidget):
         except AttributeError:
             pass
         self.boton_eliminar_alarmas.setEnabled(True)
-    def return_avisos_for_my_user(self):
+    def return_avisos_for_my_user(self) -> None:
         """ Solicita los avisos asociados al user actual
         al servidor.
         Luego los transforma en un DataFrame de pandas,
@@ -652,9 +659,11 @@ class AlarmasWidget(QWidget):
                     # position='Custom',   # NOTE: use custom info bar manager
                     duration=1500,
                     parent=self
-                )            
+                )
         self.boton_leer_avisos.setEnabled(True)
-    def crear_df_avisos(self, response_datos):
+    def crear_df_avisos(self, response_datos) -> Tuple[np.array, pd.DataFrame]:
+        """ Crea un df con los avisos que se han generado en el servidor
+        """
         list_tipo_alarma = []
         list_dato_afectado = []
         list_ciudad = []
@@ -694,7 +703,9 @@ class AlarmasWidget(QWidget):
         self.ciudades_anadir_al_tree = ciudades
         return ciudades, df
 
-    def anadir_avisos(self, ciudades, df):
+    def anadir_avisos(self, ciudades, df: pd.DataFrame) -> None:
+        """ Añade los avisos al treeview
+        """
         self.avisos_tree.clear()
         ciudades_unicas = df["ciudad"].unique()
         desplegar = False
@@ -735,7 +746,11 @@ class AlarmasWidget(QWidget):
             ## continua aqui añadiendo los avisos al
             ## tree view de alarms
             ## añade que al eliminar una alarma elimine sus avisos
-    def set_reducido_de_avisos_filtrar(self, df: pd.DataFrame, numero_de_horas_entre_avisos: int):
+    def set_reducido_de_avisos_filtrar(self, df: pd.DataFrame,
+        numero_de_horas_entre_avisos: int) -> pd.DataFrame:
+        """ Filtra el df de avisos para que tenga una separacion
+        concreta de horas entre datos
+        """
         list_tipo_alarma = []
         list_dato_afectado = []
         list_ciudad = []
@@ -760,7 +775,10 @@ class AlarmasWidget(QWidget):
                 if df.iloc[indice - 1]["ciudad"] == fila["ciudad"]:
                     if df.iloc[indice - 1]["tipo_alarma"] == fila["tipo_alarma"]:
                         if df.iloc[indice - 1]["dato_afectado"] == fila["dato_afectado"]:
-                            if (fila["fecha_dato"] - minimum_date).total_seconds() / 3600 >= numero_de_horas_entre_avisos:
+                            condition = (
+                                fila["fecha_dato"] - minimum_date
+                                ).total_seconds() / 3600 >= numero_de_horas_entre_avisos
+                            if condition:
                                 list_tipo_alarma.append(fila["tipo_alarma"])
                                 list_dato_afectado.append(fila["dato_afectado"])
                                 list_ciudad.append(fila["ciudad"])
@@ -799,4 +817,3 @@ class AlarmasWidget(QWidget):
             )
         df.reset_index(drop=True, inplace=True)
         return df
-

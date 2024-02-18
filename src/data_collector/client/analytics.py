@@ -5,11 +5,10 @@ su analisis y los forecast predictivos (future feature)
 """
 import json
 import asyncio
-import websockets
 import pickle
+import websockets
 
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QVBoxLayout
@@ -18,7 +17,6 @@ from PyQt5.QtWidgets import QScrollArea
 from PyQt5.QtWidgets import QStackedWidget
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QEasingCurve
 
 from qfluentwidgets import SmoothScrollArea
 from qfluentwidgets import Flyout
@@ -28,7 +26,6 @@ from qfluentwidgets import CommandBar
 from qfluentwidgets import TransparentDropDownPushButton
 from qfluentwidgets import RoundMenu
 from qfluentwidgets import MenuAnimationType
-from qfluentwidgets import Action
 from qfluentwidgets import CommandBarView
 from qfluentwidgets import FluentIcon as FIF
 from qfluentwidgets import setFont
@@ -36,24 +33,11 @@ from qfluentwidgets import InfoBar
 from qfluentwidgets import InfoBarPosition
 from qfluentwidgets import TransparentPushButton
 
-import plotly.graph_objs as go
 import pandas as pd
-from redis import asyncio as aioredis
+from redis import asyncio as aioredis # CHANGE THIS
+# CLIENT SHOULD NOT CONNECT TO REDDIS BUT SERVER INSTEAD
 
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-
-from statsmodels.graphics.tsaplots import plot_acf
-from statsmodels.graphics.tsaplots import plot_pacf
-
-from lightgbm import LGBMRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import StandardScaler
-from skforecast.ForecasterAutoreg import ForecasterAutoreg
-from skforecast.model_selection import backtesting_forecaster
-from skforecast.ForecasterAutoregMultiSeries import ForecasterAutoregMultiSeries
-from skforecast.model_selection_multiseries import backtesting_forecaster_multiseries
-
 from general_functions import open_webbrowser
 
 #plt.style.use('seaborn-v0_8-darkgrid')
@@ -62,7 +46,7 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
@@ -78,15 +62,22 @@ class AnalyticsWidget(QWidget):
         - Forecasting (proximamente)
         - Detección de outliers/clustering (proximamente)
     """
-    def __init__(self):
+    def __init__(self, lista_ciudades):
         super().__init__()
         self.token = None
         self.server_ip = "localhost"
         self.setObjectName("AnalyticsWidget")
-        self.ciudades = ("Vigo", "Lugo", "Madrid")
+        self.lista_ciudades = lista_ciudades
         self.variables = ("temperatura", "humedad", "presion")
         self.contextMenuEvent = self.menu_general
+        self.command_bar: CommandBar = None
+        self.button_change_serie_unica: TransparentDropDownPushButton = None
+        self.contenido_stackedwidget = QStackedWidget()
+        self.datos_iniciales_scroll = QScrollArea()
     def menu_general(self, event):
+        """ Despliega un menu al hacer click derecho en
+        la aplicación
+        """
         menu = RoundMenu(parent=self)
         accion_cambiar_usuario = Action(FIF.UPDATE, "Cambiar usuario", shortcut="Ctrl+U")
         menu.addAction(accion_cambiar_usuario)
@@ -134,8 +125,8 @@ class AnalyticsWidget(QWidget):
                     # position='Custom',   # NOTE: use custom info bar manager
                     duration=1500,
                     parent=self
-                    )   
-                db_data = {"autenticado" : False} 
+                    )
+                db_data = {"autenticado" : False}
             finally:
                 await websocket.close()
         return db_data
@@ -158,7 +149,7 @@ class AnalyticsWidget(QWidget):
                 temperatura = element["current"]["temp_c"]
                 humedad = element["current"]["humidity"]
                 presion = element["current"]["pressure_mb"]
-                ciudad = element["location"]["name"]
+                # ciudad = element["location"]["name"]
             lista_fechas.append(fecha)
             lista_temperaturas.append(temperatura)
             lista_humedades.append(humedad)
@@ -173,6 +164,10 @@ class AnalyticsWidget(QWidget):
         df["fecha"] = pd.to_datetime(df["fecha"])
         return df
     async def comprobar_token(self):
+        """ Comprueba que el token de jwt
+        sea valido. Para ello hace una
+        petición al servidor
+        """
         uri = f"ws://{self.server_ip}:8765"
         token = {"token" : self.token}
         request = {"tipo_request" : "comprobar_token", "value" : token}
@@ -220,13 +215,13 @@ class AnalyticsWidget(QWidget):
         if response:
             lista_db_data = []
             lista_dfs = []
-            for ciudad in self.ciudades:
+            for ciudad in self.lista_ciudades:
                 append = await self.retrieve_data_from_db(ciudad)
                 if not isinstance(append, dict):
                     append = json.loads(append)
                     append = append["data"]
                     lista_db_data.append(append)
-            for db_data, ciudad in zip(lista_db_data, self.ciudades):
+            for db_data, ciudad in zip(lista_db_data, self.lista_ciudades):
                 df = self.create_df_from_data(db_data)
                 df["ciudad"] = ciudad
                 df["fecha"] = pd.to_datetime(df["fecha"])
@@ -254,6 +249,9 @@ class AnalyticsWidget(QWidget):
                 parent=self
             )
     def on_graph_click(self, event):
+        """ Despliega un menu al hacer click en un grafico
+        para poder exportarlo como imagen y otras opciones
+        """
         if event.inaxes:
             view = CommandBarView(self)
         view.addAction(Action(FIF.SHARE, 'Share'))
@@ -264,36 +262,60 @@ class AnalyticsWidget(QWidget):
         view.addHiddenAction(Action(FIF.SETTING, 'Settings', shortcut='Ctrl+S'))
         view.resizeToSuitableWidth()
 
-        Flyout.make(view, self.datos_iniciales_scroll, self, FlyoutAnimationType.FADE_IN)            
+        Flyout.make(view, self.datos_iniciales_scroll, self, FlyoutAnimationType.FADE_IN)
     def save_fig(self):
+        """ Ejecuta la exportación del grafico a un
+        archivo png en el menu que se lanza al hacer click en
+        un grafico y seleccionar esa opcion en el
+        menu que se despliega
+        """
         pass # CONTINUAR AQUI
     def switch_to_datos_iniciales(self):
+        """ Cambia el stacked widget a datos iniciales
+        """
         self.contenido_stackedwidget.setCurrentIndex(0)
     def switch_to_correlaciones(self):
+        """ Cambia el stacked widget a correlaciones
+        """
         self.contenido_stackedwidget.setCurrentIndex(1)
     def switch_to_distribucion(self):
+        """ Cambia el stacked widget a distribución
+        de los datos
+        """
         self.contenido_stackedwidget.setCurrentIndex(2)
     def switch_to_serie_unica_forecasting(self):
+        """ Cambia el stacked widget a forecasting
+        """
         self.contenido_stackedwidget.setCurrentIndex(3)
         self.button_change_serie_unica.setText("Forecasting Serie Unica")
     def switch_to_serie_unica_backtesting(self):
+        """ Cambia el stacked widget a backtesting
+        """
         self.contenido_stackedwidget.setCurrentIndex(4)
         self.button_change_serie_unica.setText("Backtesting de serie unica")
     def switch_to_serie_unica_forecasting_ciclicas(self):
+        """ Cambia el stacked widget a forecasting con variables ciclicas
+        """
         self.contenido_stackedwidget.setCurrentIndex(5)
         self.button_change_serie_unica.setText("Forecasting con variables cíclicas")
     def switch_to_serie_unica_backtesting_ciclicas(self):
+        """ Cambia el stacked widget a backtesting con variables ciclicas
+        """
         self.contenido_stackedwidget.setCurrentIndex(6)
         self.button_change_serie_unica.setText("Backtesting con variables cíclicas")
     def switch_to_serie_unica_forecast_multi(self):
+        """ Cambia el stacked widget a forecasting multiseries
+        """
         self.contenido_stackedwidget.setCurrentIndex(7)
     async def leer_de_redis_lista(self, key):
+        """ Lee datos de la base de datos redis
+        WARNING: THIS WILL BE DEPRECATED, CLIENT SHOULD ONLY CONNECT
+        WITH WEBSOCKETS SERVER
+        """
         redis = await aioredis.from_url("redis://localhost:6379")
         lista_datos = await redis.lrange(key, 0, -1)
-
         await redis.aclose()
         return lista_datos
-
     def create_figure(self):
         """ Crea el layout de las tabs que
         contiene este widget.
@@ -357,7 +379,9 @@ class AnalyticsWidget(QWidget):
         distribucion_action.triggered.connect(self.switch_to_distribucion)
         self.command_bar.addAction(distribucion_action)
         self.command_bar.addSeparator()
-        self.button_change_serie_unica = TransparentDropDownPushButton('Forecasting Serie Unica', self, FIF.MENU)
+        self.button_change_serie_unica = TransparentDropDownPushButton(
+            'Forecasting Serie Unica', self, FIF.MENU
+            )
         self.button_change_serie_unica.setFixedHeight(34)
         self.button_change_serie_unica.setFixedWidth(250)
         setFont(self.button_change_serie_unica, 12)
@@ -366,10 +390,18 @@ class AnalyticsWidget(QWidget):
         forecasting_serie_unica_action.triggered.connect(self.switch_to_serie_unica_forecasting)
         backtest_serie_unica_action = Action(FIF.CUT, 'Backtesting de serie unica')
         backtest_serie_unica_action.triggered.connect(self.switch_to_serie_unica_backtesting)
-        forecasting_serie_unica__cic_action = Action(FIF.PASTE, 'Forecasting con variables cíclicas')
-        forecasting_serie_unica__cic_action.triggered.connect(self.switch_to_serie_unica_forecasting_ciclicas)
-        backtest_serie_unica_cic_action = Action(FIF.CANCEL, 'Backtesting con variables cíclicas')
-        backtest_serie_unica_cic_action.triggered.connect(self.switch_to_serie_unica_backtesting_ciclicas)
+        forecasting_serie_unica__cic_action = Action(
+            FIF.PASTE, 'Forecasting con variables cíclicas'
+            )
+        forecasting_serie_unica__cic_action.triggered.connect(
+            self.switch_to_serie_unica_forecasting_ciclicas
+            )
+        backtest_serie_unica_cic_action = Action(
+            FIF.CANCEL, 'Backtesting con variables cíclicas'
+            )
+        backtest_serie_unica_cic_action.triggered.connect(
+            self.switch_to_serie_unica_backtesting_ciclicas
+            )
         menu.addActions([
             forecasting_serie_unica_action,
             backtest_serie_unica_action,
@@ -378,14 +410,12 @@ class AnalyticsWidget(QWidget):
         ])
         self.button_change_serie_unica.setMenu(menu)
         self.command_bar.addWidget(self.button_change_serie_unica)
-        forecast_multi_series_action = Action(FIF.SETTING, 'Forecasting multi series', shortcut='Ctrl+S')
+        forecast_multi_series_action = Action(
+            FIF.SETTING, 'Forecasting multi series', shortcut='Ctrl+S'
+            )
         forecast_multi_series_action.triggered.connect(self.switch_to_serie_unica_forecast_multi)
         self.command_bar.addSeparator()
         self.command_bar.addHiddenAction(forecast_multi_series_action)
-
-        self.contenido_stackedwidget = QStackedWidget()
-
-        self.datos_iniciales_scroll = QScrollArea()
         self.datos_iniciales_scroll.setWidgetResizable(True)
         datos_iniciales_widget = QWidget()
         self.datos_iniciales_scroll.setWidget(datos_iniciales_widget)
@@ -394,7 +424,6 @@ class AnalyticsWidget(QWidget):
         layout_datos_iniciales_scroll.addWidget(datos_iniciales_widget)
         self.datos_iniciales_scroll.setLayout(layout_datos_iniciales_scroll)
         self.datos_iniciales_scroll.installEventFilter(self)
-
         correlaciones_scroll_area = SmoothScrollArea()
         correlaciones_widget = QWidget()
         correlaciones_scroll_area.setWidget(correlaciones_widget)
@@ -404,16 +433,12 @@ class AnalyticsWidget(QWidget):
         layout_general_scroll_detalle_corr = QVBoxLayout()
         layout_general_scroll_detalle_corr.addWidget(correlaciones_widget)
         correlaciones_scroll_area.setLayout(layout_general_scroll_detalle_corr)
-
         distribucion_datos_widget = QWidget()
         self.contenido_stackedwidget.addWidget(distribucion_datos_widget)
-
         layout_maestro = QVBoxLayout()
         layout_maestro.addWidget(self.command_bar)
         layout_maestro.addWidget(self.contenido_stackedwidget)
-
         self.setLayout(layout_maestro)
-
         layout_datos_iniciales = QVBoxLayout()
         loop = asyncio.get_event_loop()
         serialized_figures = loop.run_until_complete(self.leer_de_redis_lista("figuras_evolucion"))
@@ -438,12 +463,14 @@ class AnalyticsWidget(QWidget):
                 )
             layout_datos_iniciales.addWidget(grupo_item)
         datos_iniciales_widget.setLayout(layout_datos_iniciales)
-        
+
         layout_detalle_corr = QVBoxLayout()
-        lista_fig_correlaciones_ser = loop.run_until_complete(self.leer_de_redis_lista("figuras_correlaciones"))
+        lista_fig_correlaciones_ser = loop.run_until_complete(
+            self.leer_de_redis_lista("figuras_correlaciones")
+            )
         lista_fig_correlaciones = \
             [pickle.loads(ser_fig) for ser_fig in lista_fig_correlaciones_ser]
-        for fig_corr, ciudad in zip(lista_fig_correlaciones, self.ciudades):
+        for fig_corr, ciudad in zip(lista_fig_correlaciones, self.lista_ciudades):
             corr_canvas = FigureCanvas(fig_corr)
             corr_canvas.wheelEvent = lambda event: self.on_whell_event(
                 event,
@@ -552,13 +579,13 @@ class AnalyticsWidget(QWidget):
         self.contenido_stackedwidget.addWidget(
             QWidget()
             )
-        
+
         tab_forecasting_multiseries = QWidget()
         self.contenido_stackedwidget.addWidget(tab_forecasting_multiseries)
     def on_whell_event(self, event, scroll_area):
+        """ Desplaza la aplicación verticalmente
+        cuando se usa la rueda del mouse
+        """
         delta = event.angleDelta().y()
         delta = int(scroll_area.verticalScrollBar().value() - delta / 3)
         scroll_area.verticalScrollBar().setValue(delta)
-
-
-

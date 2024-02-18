@@ -8,20 +8,21 @@ Funciones:
     - Añadir un nuevo user en la db (insert_user)
     - Autenticar (autenticar)
 """
-import bcrypt
+from typing import Dict
 from datetime import datetime
 from datetime import timedelta
+import bcrypt
+from motor.motor_asyncio import AsyncIOMotorCollection
 from data_validation import Usuario
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
-
 
 def generate_password_hash(password: str) -> str:
     """ Crea un password hash para evitar
@@ -38,7 +39,8 @@ def check_hashed_password(password: str, hashed_password: str) -> bool:
     password_encoded = password.encode("utf-8")
     return bcrypt.checkpw(password_encoded, hashed_password)
 
-async def return_user(username: str, users_collection):
+async def return_user(username: str,
+    users_collection: AsyncIOMotorCollection) ->Dict:
     """ Comprueba si existe en la db un usuario
     con el nombre introducido en la GUI. Devuelve
     el objecto con los datos del usuario
@@ -47,7 +49,9 @@ async def return_user(username: str, users_collection):
     result = await users_collection.find_one(query)
     return result
 
-async def insert_user(username: str, password: str, users_collection, tipo_user: str):
+async def insert_user(username: str,
+    password: str, users_collection,
+    tipo_user: str) -> None:
     """ Añade un usuario nuevo, comprueba primero si ya existe uno
     con igual username.
     Genera el hash de la contraseña y lo guarda en la db
@@ -57,13 +61,14 @@ async def insert_user(username: str, password: str, users_collection, tipo_user:
         print("no añadido root user")
     else:
         hashed_password = generate_password_hash(password)
-        query = {"usuario" : username, "contraseña" : hashed_password, "tipo_user" : tipo_user}
+        query = {"usuario" : username, "contrasenha" : hashed_password, "tipo_user" : tipo_user}
         usuario_obj = Usuario(**query)
         await users_collection.insert_one(usuario_obj.dict())
         print("añadido root user")
 
 
-async def autenticar(user_dict, users_collection):
+async def autenticar(user_dict: Dict,
+    users_collection: AsyncIOMotorCollection) -> Dict:
     """ Recibe los datos de usuario que se han introducido
     en la GUI en forma de diccionario, comprueba si existe
     y confirma que el password coincide con su hash
@@ -74,10 +79,10 @@ async def autenticar(user_dict, users_collection):
     un token con pyjwt
     """
     user = user_dict.get("usuario")
-    password = user_dict.get("contraseña")
+    password = user_dict.get("contrasenha")
     user = await return_user(user, users_collection)
     if user:
-        hashed_password = user["contraseña"].encode("utf-8")
+        hashed_password = user["contrasenha"].encode("utf-8")
         crear_token = check_hashed_password(password, hashed_password)
         if crear_token:
             fecha_caducidad_token = datetime.now() + timedelta(days=1)
@@ -93,12 +98,12 @@ async def autenticar(user_dict, users_collection):
     else:
         result = {"autenticado" : False}
     return result
-def check_fecha_caducidad_token(token) -> bool:
+def check_fecha_caducidad_token(token: str) -> bool:
+    """ Comprueba si un token de jwt ha expirado y devuelve
+    un booleano como respuesta, False si no es válido
+    """
     now = datetime.now()
     fecha_caducidad = token["fecha_caducidad"]
     fecha_caducidad = datetime.strptime(fecha_caducidad, "%Y-%m-%d %H:%M:%S")
-    if now < fecha_caducidad:
-        result = True
-    else:
-        result = False
+    result = bool(now < fecha_caducidad)
     return result

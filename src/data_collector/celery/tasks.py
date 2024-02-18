@@ -1,17 +1,23 @@
 #!/usr/bin/env python
-""" Analytics widget, contiene varias tabs
-en los que se muestran los graficos de datos,
-su analisis y los forecast predictivos (future feature)
+""" Modulo con tareas de celery.
+Conecta con la base de datos de MongoDB y extrae los datos
+de la API de Weather.
+Realiza los calculos de forecasting y backtesting.
+Crea las figuras de matplotlib y las serializa con pickle
+Guarda los datos en redis
 """
 import asyncio
 import pickle
 from typing import List
-from typing import Tuple
 from typing import Dict
+from typing import Tuple
+from datetime import datetime
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_acf
 # from statsmodels.graphics.tsaplots import plot_pacf
+
 from lightgbm import LGBMRegressor
 # from sklearn.metrics import mean_squared_error
 # from sklearn.preprocessing import StandardScaler
@@ -19,8 +25,13 @@ from skforecast.ForecasterAutoreg import ForecasterAutoreg
 from skforecast.model_selection import backtesting_forecaster
 # from skforecast.ForecasterAutoregMultiSeries import ForecasterAutoregMultiSeries
 # from skforecast.model_selection_multiseries import backtesting_forecaster_multiseries
+
+from redis import asyncio as aioredis
+from motor.motor_asyncio import AsyncIOMotorClient
 from motor.motor_asyncio import AsyncIOMotorCollection
-# plt.style.use('seaborn-v0_8-darkgrid')
+from celery import Celery
+from celery.schedules import crontab
+
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
@@ -30,18 +41,24 @@ __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
 
+CONNECTION_STRING = "mongodb://localhost:27017/"
+MY_CLIENT = AsyncIOMotorClient(CONNECTION_STRING)
+MY_DB = MY_CLIENT["my_app_db"]
+DATA_COLLECTION = MY_DB["api_data"]
+CIUDADES = ("Vigo", "Lugo", "Madrid")
+VARIABLES = ("temperatura", "humedad", "presion")
 
-
-async def retrieve_data_from_db(my_col: AsyncIOMotorCollection,
+async def obtain_data_form_db(data_collection: AsyncIOMotorCollection,
     ciudad: str) -> List[Dict]:
-    """ Lee los datos de la API que se encuentren
-    almacenados en la db para una ciudad concreta
+    """ Recibe la colección de datos de MongoDB y la ciudad
+    a buscar.
+    Realiza la búsqueda en MongoDB y devuelve una lista
+    como resultado
     """
     query = {"location.name" : ciudad}
-    result = my_col.find(query)
-    db_data = await result.to_list(length=500000)
-    return db_data
-
+    result = data_collection.find(query)
+    result = await result.to_list(length=500000)
+    return result
 def create_df_from_data(db_data: List[Dict]) -> pd.DataFrame:
     """ Crea un df con los datos proporcionados
     por el metodo retrieve_data_from_db
@@ -61,7 +78,7 @@ def create_df_from_data(db_data: List[Dict]) -> pd.DataFrame:
             temperatura = element["current"]["temp_c"]
             humedad = element["current"]["humidity"]
             presion = element["current"]["pressure_mb"]
-            # ciudad = element["location"]["name"]
+            #ciudad = element["location"]["name"]
         lista_fechas.append(fecha)
         lista_temperaturas.append(temperatura)
         lista_humedades.append(humedad)
@@ -75,24 +92,21 @@ def create_df_from_data(db_data: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame(dict_data)
     df["fecha"] = pd.to_datetime(df["fecha"])
     return df
-async def read_data_from_db(lista_ciudades: List[str],
-    my_col: AsyncIOMotorCollection) -> List[pd.DataFrame]:
-    """ Lanza la lectura de datos de la db
-    para las tres ciudades, la creacion de los
-    DataFrames de pandas.
-    Almacena los 3 dfs en una lista
+
+async def obtain_data_form_cities(data_collection: AsyncIOMotorCollection,
+    ciudades: str) -> List[pd.DataFrame]:
+    """ LLama a las funciones para obtener datos y crear dfs
+    Genera una lista de df's y la devuleve
     """
-    lista_dfs_resampled = []
+    lista_db_data = []
     lista_dfs = []
-    tasks_list = []
-    for ciudad in lista_ciudades:
-        task = asyncio.create_task(retrieve_data_from_db(my_col, ciudad))
-        tasks_list.append(task)
-    results = await asyncio.gather(*tasks_list)
-    for db_data, ciudad in zip(results, lista_ciudades):
+    lista_dfs_resampled = []
+    for ciudad in ciudades:
+        append = await obtain_data_form_db(data_collection, ciudad)
+        lista_db_data.append(append)
+    for db_data, ciudad in zip(lista_db_data, ciudades):
         df = create_df_from_data(db_data)
         df["ciudad"] = ciudad
-        df["fecha"] = pd.to_datetime(df["fecha"])
         lista_dfs.append(df)
     for index, df in enumerate(lista_dfs):
         df.set_index("fecha", inplace=True)
@@ -102,15 +116,15 @@ async def read_data_from_db(lista_ciudades: List[str],
         df = df[["temperatura", "humedad", "presion"]]
         lista_dfs_datos.append(df)
     for index, df in enumerate(lista_dfs_datos):
-        df_resampled = df.resample("8H", closed="left", label="right").mean()
+        df_resampled = df.resample("2H", closed="left", label="right").mean()
         df_resampled = df_resampled.fillna(method='ffill')
         lista_dfs_resampled.append(df_resampled)
     return lista_dfs_resampled
 
 def create_evolucion_variable_fig(lista_dfs_resampled: List[pd.DataFrame],
     lista_ciudades: List[str], item: str) -> bytes:
-    """ Crea una figura de matplotlib serializada con pickle.
-    La figura representa la evolución de los datos en varias ciudades
+    """ Crea la figura que muestra simplemente la evolución de las
+    variables y la devulve serializada con pickle
     """
     fig, ax = plt.subplots(figsize=(14, 8))
     for df_resampled, ciudad in zip(lista_dfs_resampled, lista_ciudades):
@@ -165,8 +179,7 @@ def create_train_test_split(
         test_list.append(test)
     return train_list, test_list
 def forecasting_serie_unica(variable: str,
-    lista_ciudades: List[str],
-    train_list: List[float],
+    lista_ciudades: List[str], train_list: List[float],
     test_list: List[float]) -> plt.Figure:
     """ Genera una figura de matplotlib en la que se
     muestran los datos train, los datos test y las predicciones.
@@ -247,3 +260,77 @@ def backtesting_serie_unica(variable: str,
         ax[numero].set_ylabel(variable)
         ax[numero].set_xlabel("Fecha")
     return fig
+
+async def save_to_redis(lista_ciudades: List[str],
+    data_collection: AsyncIOMotorCollection) -> None:
+    """ Guarda los datos serializados en una base de datos de redis.
+    Se realiza el guardado en forma de listas con rpush.
+    Para ello, llama a el resto de funciones (obtener datos, crear lista de dfs,
+    generar las figuras serializadas)
+    """
+    redis = await aioredis.from_url("redis://localhost:6379")
+    lista_dfs_resampled = await obtain_data_form_cities(data_collection, lista_ciudades)
+    items = lista_dfs_resampled[0].columns[: 3]
+    await redis.delete("figuras_evolucion")
+    await redis.delete("items_figuras_evolucion")
+    for item in items:
+        await redis.rpush("items_figuras_evolucion", item)
+        serialized_fig = create_evolucion_variable_fig(
+            lista_dfs_resampled, lista_ciudades, item
+            )
+        await redis.rpush("figuras_evolucion", serialized_fig)
+    lista_fig_correlaciones = create_correlaciones_fig(lista_dfs_resampled, lista_ciudades)
+    await redis.delete("figuras_correlaciones")
+    for fig in lista_fig_correlaciones:
+        fig_serialized = pickle.dumps(fig)
+        await redis.rpush("figuras_correlaciones", fig_serialized)
+    train_list, test_list = create_train_test_split(lista_dfs_resampled)
+    lista_figuras_serie_unica = []
+    for variable in items:
+        lista_figuras_serie_unica.append(forecasting_serie_unica(
+            variable,
+            lista_ciudades,
+            train_list,
+            test_list
+            ))
+    await redis.delete("figuras_forecasting_serie_unica")
+    for fig in lista_figuras_serie_unica:
+        fig_serialized = pickle.dumps(fig)
+        await redis.rpush("figuras_forecasting_serie_unica", fig_serialized)
+    lista_figuras_backtest_unica = []
+    for variable in items:
+        lista_figuras_backtest_unica.append(backtesting_serie_unica(
+            variable,
+            lista_dfs_resampled,
+            lista_ciudades
+            ))
+    await redis.delete("figuras_backtesting_serie_unica")
+    for fig in lista_figuras_backtest_unica:
+        fig_serialized = pickle.dumps(fig)
+        await redis.rpush("figuras_backtesting_serie_unica", fig_serialized)
+    await redis.aclose()
+    matplotlib.pyplot.close()
+    for _ in range(20):
+        print("guardado en redis")
+
+app = Celery("tasks", broker="pyamqp://guest@localhost//")
+@app.task
+def save_to_redis_task() -> None:
+    """ Tarea de celery responsable del guardado de figuras
+    serializadas en listas de redis
+    """
+    print("\n\n")
+    print(f"[Guardando en redis: {datetime.now()}]")
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(save_to_redis(CIUDADES, DATA_COLLECTION))
+    except RuntimeError:
+        print("\n\n")
+        print(f"error: {datetime.now()}")
+
+app.conf.beat_schedule = {
+    'every-five-minutes-task': {
+        'task': 'tasks.save_to_redis_task',
+        'schedule': crontab(minute=0, hour='*/6'),
+    },
+}

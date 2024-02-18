@@ -11,8 +11,10 @@ Funciones:
 """
 import json
 from datetime import datetime
+from typing import List
+from typing import Dict
 from bson import ObjectId
-
+from motor.motor_asyncio import AsyncIOMotorCollection
 from data_validation import Alarma
 from data_validation import Avisos
 
@@ -20,13 +22,14 @@ __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
 
 
-async def add_alarm(alarms_collection, user, data):
+async def add_alarm(alarms_collection: AsyncIOMotorCollection,
+    user: str, data: Dict) -> str:
     """ Recibe los datos de la alarma, comprueba si
     ya existe y en caso negativo, la añade a la
     coleccion 'alarmas'
@@ -50,7 +53,8 @@ async def add_alarm(alarms_collection, user, data):
         resultado = "Ya existe esta alarma"
         print("Ya existe esta alarma")
     return resultado
-async def return_alarms(alarms_collection, user):
+async def return_alarms(alarms_collection: AsyncIOMotorCollection,
+    user: str) -> str:
     """ Recibe el nombre de usuario, busca las
     alarmas que tenga asociadas y las devuelve
     """
@@ -59,7 +63,9 @@ async def return_alarms(alarms_collection, user):
     alarmas = json.dumps(alarmas, default=str)
     return alarmas
 
-async def delete_alarms(alarms_collection, user, rows_to_delete, avisos_collection):
+async def delete_alarms(alarms_collection: AsyncIOMotorCollection,
+    user: str, rows_to_delete: List,
+    avisos_collection: AsyncIOMotorCollection) -> None:
     """ Recibe los datos de las alarmas a eliminar y las
     elimina de la db, elimina ademas sus avisos asociados
     """
@@ -78,14 +84,18 @@ async def delete_alarms(alarms_collection, user, rows_to_delete, avisos_collecti
         query_borrar_aviso = {"id_alarma" : ObjectId(alarma_id)}
         await avisos_collection.delete_many(query_borrar_aviso)
         await alarms_collection.delete_one(query)
-async def create_avisos_event(
-                            alarms_collection, avisos_collection,
-                            data_collection, api_response):
+async def create_avisos_event(alarms_collection: AsyncIOMotorCollection,
+    avisos_collection: AsyncIOMotorCollection,
+    data_collection: AsyncIOMotorCollection,
+    api_response: Dict) -> None:
+    """ Cada vez que se añade un dato a la db de Mongo,
+    se lanza esta función.
+    Comprueba todas las alarmas creadas y, si corresponde, crea un
+    aviso asociado a ese par dato-alarma
+    """
     print("añadir avisos para el ultimo dato")
     alarmas = alarms_collection.find()
     alarmas = await alarmas.to_list(length=100000)
-
-
     query = {
         "location.name" : api_response["location"]["name"],
         "location.country" : api_response["location"]["country"],
@@ -129,7 +139,7 @@ async def create_avisos_event(
                 id_alarma = alarm["_id"]
                 tipo_alarma = alarm["tipo_alarma"]
                 dato_afectado = alarm["dato_afectado"]
-                
+
                 valor_alarma = alarm["valor_alarma"]
                 fecha_alarma = alarm["fecha_alarma"]
                 usuario = alarm["usuario"]
@@ -162,7 +172,9 @@ async def create_avisos_event(
                 else:
                     print("aviso ya creado")
 
-async def create_todos_los_avisos(alarms_collection, avisos_collection, data_collection):
+async def create_todos_los_avisos(alarms_collection: AsyncIOMotorCollection,
+    avisos_collection: AsyncIOMotorCollection,
+    data_collection: AsyncIOMotorCollection) -> None:
     """ Crea las notificaciones de todas las
     alarmas, lee los datos de la API almacenados en la db,
     comprueba si corresponde crear una notificacion, comprueba
@@ -188,8 +200,8 @@ async def create_todos_los_avisos(alarms_collection, avisos_collection, data_col
                 medida_id = dato["_id"]
                 fecha_dato = dato["location"]["localtime"]
                 valor_aviso = dato["current"][dato_afectado]
-            except KeyError as e:
-                continue;
+            except KeyError:
+                continue
             if dato["location"]["name"] == ciudad:
                 query = {
                     "id_alarma" : ObjectId(id_alarma),
@@ -215,7 +227,8 @@ async def create_todos_los_avisos(alarms_collection, avisos_collection, data_col
                         )
     print("fin alarmas")
 
-async def add_aviso(avisos_collection, aviso_obj):
+async def add_aviso(avisos_collection: AsyncIOMotorCollection,
+    aviso_obj: Avisos) -> None:
     """ Añade un nuevo aviso a la db, una vez se ha
     comprobado en la funcion create_avisos, que se
     debe crear y que no existe uno igual
@@ -231,9 +244,9 @@ async def add_aviso(avisos_collection, aviso_obj):
     and valor_dato_afectado < valor_alarma:
         await avisos_collection.insert_one(aviso_obj.dict())
 
-async def return_avisos(avisos_collection, fecha_avisos,
-                        data_collection, alarms_collection,
-                        user):
+async def return_avisos(avisos_collection: AsyncIOMotorCollection,
+    fecha_avisos: str,
+    user: str) -> List[Dict]:
     """ Lee las notificacioens almacenadas en la db que
     estén asociados a unos datos a partir de cierta fecha
     que el user introduce en la GUI del cliente

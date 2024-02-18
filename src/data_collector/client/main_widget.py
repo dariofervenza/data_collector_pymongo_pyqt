@@ -10,22 +10,16 @@ import json
 import asyncio
 from pathlib import Path
 import websockets
-import webbrowser
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWidgets import QFrame
 from PyQt5.QtWidgets import QLabel
-from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QTextEdit
-from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtWidgets import QGridLayout
 
 from PyQt5.QtCore import Qt
-
 from PyQt5.QtGui import QPixmap
 
 from qfluentwidgets import ComboBox
 from qfluentwidgets import PrimaryPushButton
-from qfluentwidgets import PushButton
 from qfluentwidgets import LargeTitleLabel
 from qfluentwidgets import SubtitleLabel
 from qfluentwidgets import FluentIcon as FIF
@@ -34,19 +28,19 @@ from qfluentwidgets import ToolTipPosition
 from qfluentwidgets import RoundMenu
 from qfluentwidgets import MenuAnimationType
 from qfluentwidgets import Action
+from qfluentwidgets import InfoBar
+from qfluentwidgets import InfoBarPosition
 
 from general_functions import open_webbrowser
-from auth import AuthWindow
 
 __author__ = "Dario Fervenza"
 __copyright__ = "Copyright 2023, DINAK"
 __credits__ = ["Dario Fervenza"]
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Dario Fervenza"
 __email__ = "dariofg_@hotmail.com"
 __status__ = "Development"
-
 
 BASE_DIR = os.getcwd()
 IMAGES_FOLDER = os.path.join(BASE_DIR, "images")
@@ -57,12 +51,11 @@ ALERTS = os.path.join(IMAGES_FOLDER, "alerts.png")
 ANALYTICS = os.path.join(IMAGES_FOLDER, "analytics.png")
 STYLE = Path("style/style.qss").read_text()
 
-
 class MainWidget(QWidget):
     """ Widget default, se es el que se muestra como
     pantalla de inicio
     """
-    def __init__(self):
+    def __init__(self, lista_ciudades):
         super().__init__()
         logo_label = QLabel()
         logo_label_pixmap = QPixmap(LOGO)
@@ -77,8 +70,8 @@ class MainWidget(QWidget):
         titulo_app = LargeTitleLabel("Visualizador de datos")
 
         self.ciudad_combo_box = ComboBox(self)
-        lists_ciudades = ["Vigo", "Lugo", "Madrid"]
-        for ciudad in lists_ciudades:
+        self.lista_ciudades = lista_ciudades
+        for ciudad in self.lista_ciudades:
             self.ciudad_combo_box.addItem(ciudad)
         self.ciudad_combo_box.currentIndexChanged.connect(self.leer_datos_db)
 
@@ -88,7 +81,9 @@ class MainWidget(QWidget):
         boton_pedir_datos = PrimaryPushButton(FIF.SAVE, "Extraer datos", self)
         boton_pedir_datos.clicked.connect(self.leer_datos_db)
         boton_pedir_datos.setToolTip("Lee los datos de la db y los muestra en formato JSON")
-        boton_pedir_datos.installEventFilter(ToolTipFilter(boton_pedir_datos, 300, ToolTipPosition.RIGHT))
+        boton_pedir_datos.installEventFilter(
+            ToolTipFilter(boton_pedir_datos, 300, ToolTipPosition.RIGHT)
+            )
         self.contextMenuEvent = self.menu_general
 
         layout = QGridLayout()
@@ -130,6 +125,9 @@ class MainWidget(QWidget):
             )
         self.setLayout(layout)
     def menu_general(self, event):
+        """ Lanza un menu al hacer click derecho en la
+        aplicación
+        """
         menu = RoundMenu(parent=self)
         accion_cambiar_usuario = Action(FIF.UPDATE, "Cambiar usuario", shortcut="Ctrl+U")
         accion_cambiar_usuario.connect(self.cambiar_user)
@@ -142,6 +140,9 @@ class MainWidget(QWidget):
 
         menu.exec(self.mapToGlobal(event.pos()), aniType=MenuAnimationType.DROP_DOWN)
     def cambiar_user(self):
+        """ Gestinona el cambio de usuario cuando se hace click derecho
+        y se selecciona esa opción
+        """
         pass
 
     def leer_datos_db(self):
@@ -208,5 +209,5 @@ class MainWidget(QWidget):
                     duration=1500,
                     parent=self
                     )
-            finally:             
+            finally:
                 await websocket.close()

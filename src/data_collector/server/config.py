@@ -1,4 +1,18 @@
+#!/usr/bin/env python
+""" Guarda los datos de
+configuracion, como las colecciones de
+Mongo usadas y la secret key para los tokens
+de jwt-python
+"""
 from motor.motor_asyncio import AsyncIOMotorClient
+__author__ = "Dario Fervenza"
+__copyright__ = "Copyright 2023, DINAK"
+__credits__ = ["Dario Fervenza"]
+
+__version__ = "0.2.2"
+__maintainer__ = "Dario Fervenza"
+__email__ = "dariofg_@hotmail.com"
+__status__ = "Development"
 
 CONNECTION_STRING = "mongodb://localhost:27017/"
 MY_CLIENT = AsyncIOMotorClient(CONNECTION_STRING)
