@@ -6,7 +6,8 @@ Project is in Spanish so you may not understand all the variable names. I usuall
 
 ## Purpose of the project
 
-The main goal is educational, I do not want to build the best possible application so others could use it.\
+This application is made to collect that from the WeatherAPI service and analyse it with machine learning\
+It has a server made with websockets and a client
 I want to experiment with different technologies and increase my coding experience. That said, If you see this and you want to help me, you are welcome!
 
 ## Requirements for the project
@@ -50,9 +51,14 @@ The client has a tool bar to display the different widgets. For the moment, I cr
 	Improved UI\
 	Added dotenv to protect the secret key\
 	Added rabitMQ to decouple api response from the server\
-	Now the analitics figures are stored in a redis db\
+	Now the analytics figures are stored in a redis db\
 	Now alarm notifications are created when the data is added to the db\
-	Some other minor changes
+	Some other minor changes\
+2024-18-02:\
+	Added filter functions to graphs widget
+	Improved code with pylint
+	Added MIT license
+	
 
 
 ### Future features
