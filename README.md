@@ -6,7 +6,7 @@ Project is in Spanish so you may not understand all the variable names. I usuall
 
 ## Purpose of the project
 
-This application is made to collect that from the WeatherAPI service and analyse it with machine learning\
+This application is made to collect data from the WeatherAPI service and analyse it with machine learning\
 It has a server made with websockets and a client
 I want to experiment with different technologies and increase my coding experience. That said, If you see this and you want to help me, you are welcome!
 
