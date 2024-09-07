@@ -145,7 +145,7 @@ _In order to launch the application you need to do the following:_
 Once client.py is launched, insert server address in the first form and click "Aceptar".
 [![Server form][server-input]]
 
-Insert the default user and password. You can modify it in the `src\data_collector\server\config.py` file. Be aware that there is not a user creation or modification form yet
+Insert the default user and password. You can modify it in the `src\data_collector\server\config.py` file. Be aware that there is not a user creation or modification form yet.  
 [![User form][user-input]]
 
 Now you are logged in, here you can see a few images of my application, the first one in the alarm settings screen:
