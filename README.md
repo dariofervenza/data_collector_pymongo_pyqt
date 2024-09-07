@@ -75,7 +75,7 @@ Main components of my application:
 
 Here you can see how I connected all these components in a diagram:
 
-[![Product Name Screen Shot][product-diagram]](https://www.linkedin.com/in/dario-fervenza-garcia-602051172/)
+[![Product Name Screen Shot][product-diagram]]([https://www.linkedin.com/in/dario-fervenza-garcia-602051172/](https://github.com/dariofervenza/data_collector_pymongo_pyqt/blob/redis/images/DIAGRAMA.drawio.svg))
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
