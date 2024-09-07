@@ -63,14 +63,14 @@ I wanted to try pyQt for months but I couldn´t find an oportunity in my job. So
 This application is made to collect data from the WeatherAPI service and analyse it with machine learning.  
 It has a server made with websockets and a client made with pyqt5!  
 I want to experiment with different technologies and increase my coding experience. That said, If you see this and you want to help me, you are welcome!  
-Project is in Spanish so you may not understand all the variable names. I usually mix english with spanish when naming objects and variables.  
+Project is in Spanish so you may not understand all the variable names.
 
 Main components of my application:
 * A RabbitMQ server to handle data from the API using a queue + another queue to schedule tasks with celery
 * A celery server that periodically computes weather forecasting using skforecast and times series data
 * A reddis container that stores the serialized figures with the historical data + forecasts
-* A mongoDB server where weather data is stored and also where alarms created by th user are saved
-* A websockets server thar handles client GUI's requests, retrieves data from the database and sends it to the pyqt5 client
+* A mongoDB server where weather data is stored and also where alarms created by the user are saved
+* A websockets server that handles client GUI's requests, retrieves data from the database and sends it to the pyqt5 client
 * A GUI client where the final user can check the weather data, filter it, set alarms and receive notifications and more!
 
 Here you can see how I connected all these components in a diagram:
